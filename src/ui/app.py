@@ -1,5 +1,5 @@
 # RJ Auto Metadata
-# Copyright (C) 2025 Riiicil
+# Copyright (C) 2026 Riiicil
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -44,7 +44,7 @@ from src.utils.system_checks import (check_ghostscript, check_ffmpeg, check_gtk_
 from src.metadata.exif_writer import check_exiftool_exists
 from src.api.api_key_checker import check_api_keys_status
 
-APP_VERSION = "3.11.2"
+APP_VERSION = "3.11.3"
 CONFIG_FILE = "config.json"
 
 class MetadataApp(ctk.CTk):
@@ -154,7 +154,6 @@ class MetadataApp(ctk.CTk):
         self.keyword_count_var = tk.StringVar(value="49")
         self.priority_var = tk.StringVar(value="Detailed")
         
-        # Embedding Setting
         self.embedding_var = tk.StringVar(value="Enable")
         self.available_embedding = ["Enable", "Disable"]
         self.available_priorities = ["Detailed", "Balanced", "Less"]

@@ -1,5 +1,5 @@
 # RJ Auto Metadata
-# Copyright (C) 2025 Riiicil
+# Copyright (C) 2026 Riiicil
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -40,10 +40,12 @@ from src.api.prompts import (
 )
 GEMINI_MODELS = [
     "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",  
+    "gemini-2.0-flash-lite",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
-    "gemini-2.5-pro"
+    "gemini-2.5-pro",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview"
 ]
 DEFAULT_MODEL = "gemini-2.0-flash"
 FALLBACK_MODELS = [
@@ -51,7 +53,9 @@ FALLBACK_MODELS = [
     "gemini-2.0-flash-lite",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
-    "gemini-2.5-pro"
+    "gemini-2.5-pro",
+    "gemini-3-flash-preview",
+    "gemini-3.1-flash-lite-preview"
 ]
 MODEL_LAST_USED = defaultdict(float)
 MODEL_LOCK = threading.Lock()
@@ -60,22 +64,32 @@ API_KEY_LOCK = threading.Lock()
 API_KEY_MIN_INTERVAL = 3.0 
 SUCCESS_DELAY = 1.0  
 
+def is_gemini_3_model(model_name: str) -> bool:
+    return "gemini-3" in model_name
+
 def should_use_sdk(model_name: str) -> bool:
     if not GENAI_SDK_AVAILABLE:
         return False
-    
-    return "2.5" in model_name
+    return "2.5" in model_name or is_gemini_3_model(model_name)
 
-def get_thinking_config_for_model(model_name: str):
-    if not should_use_sdk(model_name):
-        return None
+def get_thinking_budget_for_model(model_name: str):
     if "gemini-2.5-pro" in model_name:
         return {"thinking_budget": -1}
-    elif "gemini-2.5-flash" in model_name and "lite" not in model_name:
-        return {"thinking_budget": 0}
     elif "gemini-2.5-flash-lite" in model_name:
         return {"thinking_budget": 0}
+    elif "gemini-2.5-flash" in model_name:
+        return {"thinking_budget": 0}
     return None
+
+def get_thinking_level_for_model(model_name: str):
+    if not is_gemini_3_model(model_name):
+        return None
+    if "flash-lite" in model_name:
+        return "minimal"
+    return None
+
+def get_thinking_config_for_model(model_name: str):
+    return get_thinking_budget_for_model(model_name)
 
 def get_sdk_client(api_key: str):
     if not GENAI_SDK_AVAILABLE:
@@ -263,9 +277,13 @@ def _attempt_gemini_sdk_request(
                 use_png_prompt, use_video_prompt, priority, image_basename, is_vector_conversion
             )
     parts.append(types.Part.from_text(text=selected_prompt_text))
-    max_output_tokens = 15000 if "2.5" in model_to_use else 800
+    max_output_tokens = 800
+    if "2.5" in model_to_use or is_gemini_3_model(model_to_use):
+        max_output_tokens = 15000
+    temperature = 1.0 if is_gemini_3_model(model_to_use) else 0.2
+
     generation_config = types.GenerateContentConfig(
-        temperature=0.2,
+        temperature=temperature,
         max_output_tokens=max_output_tokens,
         top_p=0.8,
         top_k=40,
@@ -286,12 +304,22 @@ def _attempt_gemini_sdk_request(
             "required": ["title", "description", "keywords", "adobe_stock_category", "shutterstock_category"]
         }
     )
-    thinking_config = get_thinking_config_for_model(model_to_use)
-    if thinking_config:
-        thinking_config_obj = types.ThinkingConfig(
-            thinking_budget=thinking_config["thinking_budget"]
-        )
-        generation_config.thinking_config = thinking_config_obj
+    if is_gemini_3_model(model_to_use):
+        thinking_level = get_thinking_level_for_model(model_to_use)
+        if thinking_level is not None:
+            try:
+                generation_config.thinking_config = types.ThinkingConfig(
+                    thinking_level=thinking_level
+                )
+            except Exception:
+                log_message(f"SDK does not support thinking_level for {model_to_use}, using model default.", "debug")
+    else:
+        thinking_budget_config = get_thinking_budget_for_model(model_to_use)
+        if thinking_budget_config:
+            generation_config.thinking_config = types.ThinkingConfig(
+                thinking_budget=thinking_budget_config["thinking_budget"]
+            )
+
     if check_stop_event(stop_event, f"SDK request cancelled before generate: {image_basename}"):
         return -2, None, "stopped", "Process stopped before SDK generate"
     try:
@@ -306,43 +334,50 @@ def _attempt_gemini_sdk_request(
             contents=contents,
             config=generation_config
         )
-        response_data = {
-            "candidates": [],
-            "usageMetadata": {}
-        }
+        generated_text = None
+        try:
+            generated_text = response.text
+        except Exception:
+            generated_text = None
+        finish_reason = "STOP"
+        thoughts_token_count = 0
         if response.candidates:
-            for candidate in response.candidates:
-                candidate_dict = {
-                    "content": {
-                        "role": "model",
-                        "parts": []
-                    },
-                    "finishReason": candidate.finish_reason or "STOP",
-                    "index": 0
-                }
-                
-                if candidate.content and candidate.content.parts:
-                    for part in candidate.content.parts:
-                        if hasattr(part, 'text') and part.text:
-                            candidate_dict["content"]["parts"].append({"text": part.text})
-                        elif hasattr(part, 'thought') and part.thought:
-                            candidate_dict["content"]["parts"].append({
-                                "text": part.thought,
-                                "thought": True
-                            })
-                response_data["candidates"].append(candidate_dict)
-        if hasattr(response, 'usage_metadata'):
+            finish_reason = str(response.candidates[0].finish_reason or "STOP")
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            thoughts_token_count = getattr(response.usage_metadata, 'thoughts_token_count', 0) or 0
+
+        usage_metadata = {}
+        if hasattr(response, 'usage_metadata') and response.usage_metadata:
             usage = response.usage_metadata
-            response_data["usageMetadata"] = {
+            usage_metadata = {
                 "promptTokenCount": getattr(usage, 'prompt_token_count', 0),
+                "candidatesTokenCount": getattr(usage, 'candidates_token_count', 0),
                 "totalTokenCount": getattr(usage, 'total_token_count', 0),
-                "thoughtsTokenCount": getattr(usage, 'thoughts_token_count', 0)
+                "thoughtsTokenCount": thoughts_token_count
             }
-        return 200, response_data, None, None
+
+        if generated_text:
+            log_message(f"SDK response.text extracted for {model_to_use} ({image_basename}), thoughtsTokenCount: {thoughts_token_count}", "debug")
+            response_data = {
+                "candidates": [{
+                    "content": {"role": "model", "parts": [{"text": generated_text}]},
+                    "finishReason": finish_reason,
+                    "index": 0
+                }],
+                "usageMetadata": usage_metadata
+            }
+            return 200, response_data, None, None
+        else:
+            if finish_reason == "MAX_TOKENS":
+                log_message(f"{model_to_use} hit MAX_TOKENS (thoughtsTokenCount: {thoughts_token_count}). No output text.", "warning")
+                response_data = {"candidates": [], "usageMetadata": usage_metadata}
+                return 200, response_data, None, None
+            log_message(f"{model_to_use} SDK returned no text for {image_basename}. thoughtsTokenCount: {thoughts_token_count}, finishReason: {finish_reason}", "warning")
+            response_data = {"candidates": [], "usageMetadata": usage_metadata}
+            return 200, response_data, None, None
     except Exception as e:
         error_msg = str(e)
         log_message(f"SDK failed for {model_to_use}: {error_msg}. Falling back to REST API once.", "warning")
-        
         return _attempt_gemini_rest_request(
             image_paths, current_api_key, model_to_use, stop_event,
             use_png_prompt, use_video_prompt, priority, image_basename, is_vector_conversion
@@ -430,36 +465,43 @@ def _attempt_gemini_rest_request(
             return -3, None, "file_read", str(e)
     parts.append({"text": selected_prompt_text})
     max_output_tokens = 800
-    if "gemini-2.5-pro" in model_to_use:
-        max_output_tokens = 15000  
-    elif "gemini-2.5-flash" in model_to_use and "lite" not in model_to_use:
-        max_output_tokens = 15000 
-    elif "gemini-2.5-flash-lite" in model_to_use:
-        max_output_tokens = 15000   
+    if "2.5" in model_to_use or is_gemini_3_model(model_to_use):
+        max_output_tokens = 15000
+    temperature = 1.0 if is_gemini_3_model(model_to_use) else 0.2
+    generation_config_payload = {
+        "temperature": temperature,
+        "maxOutputTokens": max_output_tokens,
+        "topP": 0.8,
+        "topK": 40,
+        "response_mime_type": "application/json",
+        "response_schema": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "maxLength": 180},
+                "description": {"type": "string", "maxLength": 500},
+                "keywords": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "maxItems": 60
+                },
+                "adobe_stock_category": {"type": "string"},
+                "shutterstock_category": {"type": "string"}
+            },
+            "required": ["title", "description", "keywords", "adobe_stock_category", "shutterstock_category"]
+        }
+    }
+    if is_gemini_3_model(model_to_use):
+        thinking_level = get_thinking_level_for_model(model_to_use)
+        if thinking_level is not None:
+            generation_config_payload["thinkingConfig"] = {"thinkingLevel": thinking_level}
+    elif "2.5" in model_to_use:
+        budget_config = get_thinking_budget_for_model(model_to_use)
+        if budget_config:
+            generation_config_payload["thinkingConfig"] = {"thinkingBudget": budget_config["thinking_budget"]}
+
     payload = {
         "contents": [{"role": "user", "parts": parts}],
-        "generationConfig": {
-            "temperature": 0.2, 
-            "maxOutputTokens": max_output_tokens,
-            "topP": 0.8, 
-            "topK": 40,
-            "response_mime_type": "application/json",
-            "response_schema": {
-                "type": "object",
-                "properties": {
-                    "title": {"type": "string", "maxLength": 180},
-                    "description": {"type": "string", "maxLength": 500},
-                    "keywords": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "maxItems": 60
-                    },
-                    "adobe_stock_category": {"type": "string"},
-                    "shutterstock_category": {"type": "string"}
-                },
-                "required": ["title", "description", "keywords", "adobe_stock_category", "shutterstock_category"]
-            }
-        }
+        "generationConfig": generation_config_payload
     }
     headers = {"Content-Type": "application/json"}
     api_url = f"{api_endpoint}?key={current_api_key}"
@@ -557,10 +599,6 @@ def _extract_metadata_from_text(generated_text: str, keyword_count: str):
                 else:
                     tags = []
                 tags = list(dict.fromkeys(tags))[:60]
-                # try:
-                #     log_message(f"[Gemini] Raw keywords: {len(raw_keywords)}, after dedup/limit: {len(tags)} (limit 60)", "debug")
-                # except Exception:
-                #     pass
                 as_category = json_data.get("adobe_stock_category", "")
                 ss_category = json_data.get("shutterstock_category", "")
                 return {
@@ -588,7 +626,6 @@ def _extract_metadata_from_text(generated_text: str, keyword_count: str):
         ss_cat_match = re.search(r"ShutterstockCategory:\s*([^\n]*)", generated_text)
         if ss_cat_match:
             ss_category = ss_cat_match.group(1).strip()
-        # log_message(f"Successfully parsed legacy text format with {len(tags)} keywords", "debug")
     except Exception as e:
         log_message(f"[ERROR] Failed to parse metadata from Gemini: {e}")
         return None
@@ -657,73 +694,29 @@ def get_gemini_metadata(image_path, api_key, stop_event, use_png_prompt=False, u
                 content = candidate.get("content", {})
                 parts = content.get("parts", [])
                 finish_reason = candidate.get("finishReason", "")
+                usage_metadata = response_data.get("usageMetadata", {})
+                thoughts_token_count = usage_metadata.get("thoughtsTokenCount", 0)
                 generated_text = ""
-                if "2.5" in model_for_this_attempt and not parts:
-                    usage_metadata = response_data.get("usageMetadata", {})
-                    thoughts_token_count = usage_metadata.get("thoughtsTokenCount", 0)
-                    if finish_reason == "MAX_TOKENS":
-                        log_message(f"Thinking model {model_for_this_attempt} hit MAX_TOKENS during thinking phase (thoughtsTokenCount: {thoughts_token_count}). This is expected behavior - the model was thinking too much.", "info")
-                        if thoughts_token_count > 8000: 
-                            log_message(f"Extremely high thinking tokens ({thoughts_token_count}) suggests complex image analysis. Consider using simpler prompt or different model.", "warning")
-                            error_type = "max_tokens_thinking_phase"
-                        else:
-                            error_type = "max_tokens_no_content"
-                    elif thoughts_token_count > 0:
-                        log_message(f"Thinking model {model_for_this_attempt} has thoughtsTokenCount: {thoughts_token_count} but empty parts. Attempting enhanced extraction.", "info")
-                        try:
-                            if "text" in content:
-                                generated_text = content.get("text", "")
-                                log_message(f"Thinking model: Found text in content directly", "debug")
-                            if not generated_text and isinstance(content, dict):
-                                for key, value in content.items():
-                                    if isinstance(value, str) and ("Title:" in value or "Keywords:" in value):
-                                        generated_text = value
-                                        log_message(f"Thinking model: Found text in content.{key}", "debug")
-                                        break
-                            if not generated_text:
-                                for key, value in candidate.items():
-                                    if isinstance(value, str) and ("Title:" in value or "Keywords:" in value):
-                                        generated_text = value
-                                        log_message(f"Thinking model: Found text in candidate.{key}", "debug")
-                                        break
-                                    elif isinstance(value, dict) and "text" in value:
-                                        generated_text = value.get("text", "")
-                                        log_message(f"Thinking model: Found text in candidate.{key}.text", "debug")
-                                        break
-                            if not generated_text and "parts" in candidate.get("content", {}):
-                                all_parts = candidate.get("content", {}).get("parts", [])
-                                for part in all_parts:
-                                    if part.get("text"):
-                                        generated_text = part.get("text", "")
-                                        log_message(f"Thinking model: Found text in hidden parts", "debug")
-                                        break
-                            if generated_text:
-                                log_message(f"Thinking model enhanced extraction succeeded for {model_for_this_attempt}", "info")
-                            else:
-                                log_message(f"Thinking model enhanced extraction failed, full candidate structure: {list(candidate.keys())}", "debug")
-                                log_message(f"Content structure: {content}", "debug")
-                                log_message(f"Response keys: {list(response_data.keys())}", "debug")
-                        except Exception as e:
-                            log_message(f"Thinking model enhanced extraction exception: {e}", "debug")
-                if parts and not generated_text:
+                if parts:
                     for part in parts:
                         if part.get("text") and not part.get("thought"):
                             generated_text = part.get("text", "")
                             break
-                    if not generated_text:
-                        text_parts = [part for part in parts if part.get("text")]
-                        if text_parts:
-                            generated_text = text_parts[-1].get("text", "")
                     if not generated_text:
                         for part in parts:
                             if part.get("text"):
                                 generated_text = part.get("text", "")
                                 break
                     if not generated_text:
-                        log_message(f"Debug: Response parts structure from {model_for_this_attempt}: {[list(part.keys()) for part in parts]}", "debug")
+                        log_message(f"Response parts from {model_for_this_attempt}: {[list(p.keys()) for p in parts]}", "debug")
+
+                if not parts and finish_reason == "MAX_TOKENS":
+                    log_message(f"{model_for_this_attempt} hit MAX_TOKENS with no output (thoughtsTokenCount: {thoughts_token_count}).", "warning")
+                    if thoughts_token_count > 8000:
+                        error_type = "max_tokens_thinking_phase"
                     else:
-                        thinking_parts = [part for part in parts if part.get("thought")]
-                        non_thinking_parts = [part for part in parts if part.get("text") and not part.get("thought")]
+                        error_type = "max_tokens_no_content"
+
                 if generated_text:
                     extracted_metadata = _extract_metadata_from_text(generated_text, keyword_count)
                     if extracted_metadata:
@@ -731,20 +724,10 @@ def get_gemini_metadata(image_path, api_key, stop_event, use_png_prompt=False, u
                         time.sleep(SUCCESS_DELAY)
                         return extracted_metadata
                     else:
-                        log_message(f"Failed to extract metadata structure (via helper) from Gemini text ({model_for_this_attempt}, {image_basename}).", "warning")
+                        log_message(f"Failed to extract metadata structure from Gemini text ({model_for_this_attempt}, {image_basename}).", "warning")
                         error_type = "extraction_failed"
-                else:
-                    if "2.5" in model_for_this_attempt:
-                        usage_metadata = response_data.get("usageMetadata", {})
-                        thoughts_token_count = usage_metadata.get("thoughtsTokenCount", 0)
-                        
-                        if thoughts_token_count > 0:
-                            log_message(f"Thinking model {model_for_this_attempt} had thoughtsTokenCount: {thoughts_token_count} but failed text extraction", "warning")
-                            log_message(f"Full response for debugging: {response_data}", "debug")
-                        else:
-                            log_message(f"Thinking model {model_for_this_attempt} response structure: {[list(part.keys()) for part in parts] if parts else 'No parts found'}", "debug")
-                    
-                    log_message(f"Gemini response structure is invalid (no 'parts'/'text') from {model_for_this_attempt} ({image_basename}).", "warning")
+                elif not error_type:
+                    log_message(f"Gemini response has no usable text from {model_for_this_attempt} ({image_basename}). thoughtsTokenCount: {thoughts_token_count}, finishReason: {finish_reason}", "warning")
                     error_type = "invalid_response_structure"
             else:
                 log_message(f"Success response (200) but no 'candidates' from {model_for_this_attempt} ({image_basename}).", "warning")

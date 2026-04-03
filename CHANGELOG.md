@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 -
 
+## [3.11.3] - 2026-04-04
+
+### Added
+- **Gemini 3 Series Models:** Added support for two new Gemini 3.x models:
+  - `gemini-3-flash-preview`: Frontier-class performance rivaling larger models at a fraction of the cost.
+  - `gemini-3.1-flash-lite-preview`: High-volume, cost-sensitive workhorse with Gemini 3 series quality.
+
+### Changed
+- **Thinking Config Split:** Separated thinking configuration logic for Gemini 2.5 vs Gemini 3.x models since they use incompatible parameters (mixing both causes a 400 error):
+  - **Gemini 2.5 series** → continues to use `thinking_budget` (0 for Flash/Flash-Lite, -1 dynamic for Pro).
+  - **Gemini 3.x series** → uses `thinking_level` (`"minimal"` for Flash-Lite, model default for Flash). Gracefully falls back if SDK version doesn't support the field yet.
+- **Response Parsing Simplified:** SDK requests now use `response.text` as the primary text extraction method, which automatically skips thinking/signature parts and returns only the final answer. Removed the complex ~50-line "enhanced extraction" fallback block that was previously needed for thinking models.
+- **Temperature Fix for Gemini 3:** Set `temperature=1.0` for all Gemini 3.x models (was `0.2`). Per Google's documentation, setting temperature below 1.0 on Gemini 3 models can cause looping or degraded performance.
+
+### Fixed
+- **SDK Compatibility:** Wrapped `thinking_level` assignment in `try/except` to gracefully handle older `google-genai` SDK versions that don't yet support the field, preventing `ValidationError` crashes.
+
 ## [3.11.2] - 2026-01-17
 
 ### Added
