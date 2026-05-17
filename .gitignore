@@ -120,3 +120,14 @@ setup.iss
 *.tar.bz2
 
 v*/
+
+# Logs
+logs
+
+# API key folders — never commit
+api_jikaperlu/
+
+# Environment files
+*.env
+.env*
+.env.local
