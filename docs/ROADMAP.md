@@ -37,12 +37,19 @@
 
 Note: `fetch_models()` in `provider_manager.py` is a stub returning `[]`. Real API fetch deferred to Phase 3.
 
-## Phase 3: Integration & Release
+## Phase 3: Integration & Release — Complete
 
-- Final integration testing across all providers
-- Cleanup and polish
-- Merge `dev` → `main` as new release
-- Tag as next version
+| # | Item | Status |
+|---|---|---|
+| P3-1 | Implement `fetch_models()` with OpenAI SDK | ✅ Done |
+| P3-2 | Vendor CTkScrollableDropdown, attach to all 5 dropdowns | ✅ Done |
+| P3-3 | Pass `command` callbacks through scrollable dropdowns | ✅ Done |
+| P3-4 | Per-provider API key sync on provider switch | ✅ Done |
+| P3-5 | Per-provider model selection persistence | ✅ Done |
+| P3-6 | Readonly dropdowns (`state='readonly'`) | ✅ Done |
+| P3-7 | Auto-fetch models on startup and provider switch | ✅ Done |
+
+Remaining: merge `dev` → `main`, tag next version.
 
 ## Out of Scope
 

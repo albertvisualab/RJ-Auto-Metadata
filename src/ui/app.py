@@ -39,6 +39,7 @@ from src.config.config import MEASUREMENT_ID, API_SECRET, ANALYTICS_URL
 from src.processing.batch_processing import batch_process_files
 from src.api import provider_manager
 from src.ui.widgets import ToolTip
+from src.ui.CTkScrollableDropdown import CTkScrollableDropdown
 from src.ui.dialogs import CompletionMessageManager
 from src.utils.system_checks import (check_ghostscript, check_ffmpeg, check_gtk_dependencies,set_console_visibility)
 from src.metadata.exif_writer import check_exiftool_exists
@@ -88,6 +89,7 @@ class MetadataApp(ctk.CTk):
         self._models_by_provider: dict[str, list] = {
             name: [] for name in self.available_providers
         }
+        self._selected_model_by_provider: dict[str, str] = {}
         self.provider_var = tk.StringVar(value=self.selected_provider)
         self._actual_api_keys = list(self.api_keys_by_provider.get(self.selected_provider, []))
         self.stop_event = threading.Event()
@@ -175,6 +177,9 @@ class MetadataApp(ctk.CTk):
             self._needs_initial_save = False
 
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+        # Auto-fetch models on startup if API keys exist for the active provider
+        self.after(500, self._auto_fetch_models)
 
         self.is_executable = self._is_running_as_executable()
 
@@ -408,10 +413,12 @@ Configuration of application behavior:
             values=self.available_providers,
             variable=self.provider_var,
             command=self._on_provider_change,
-            justify='center'
+            justify='center',
+            state='readonly'
         )
         self.provider_dropdown.grid(row=2, column=1, columnspan=2, padx=7, pady=(0, 10), sticky="ewn")
         self.provider_dropdown.set(self.provider_var.get())
+        self._provider_scrollable = CTkScrollableDropdown(self.provider_dropdown, values=self.available_providers, justify='center', button_color='transparent', frame_corner_radius=8, width=125, height=120, command=self._on_provider_change)
 
         # Row 3 (c) col 0: URL entry field — always visible, read-only for built-in providers
         self._custom_base_url_var = tk.StringVar(value="")
@@ -429,9 +436,11 @@ Configuration of application behavior:
             values=self.available_models,
             variable=self.model_var,
             width=120,
-            justify='center'
+            justify='center',
+            state='readonly'
         )
         self.model_dropdown.grid(row=3, column=1, columnspan=2, padx=7, pady=(0, 5), sticky="ewn")
+        self._model_scrollable = CTkScrollableDropdown(self.model_dropdown, values=self.available_models, justify='left', button_color='transparent', frame_corner_radius=8, width=300)
 
         # Col 3 rows 1-3: Action buttons frame
         process_buttons = ctk.CTkFrame(api_section, fg_color="transparent")
@@ -506,16 +515,19 @@ Configuration of application behavior:
         
         ctk.CTkLabel(settings_col2, text="Theme:", font=self.font_normal).grid(row=1, column=0, padx=10, pady=5, sticky="w")
         self.theme_var = tk.StringVar(value="dark")
-        self.theme_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_themes, variable=self.theme_var, command=self._change_theme, width=120, justify='center')
+        self.theme_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_themes, variable=self.theme_var, command=self._change_theme, width=120, justify='center', state='readonly')
         self.theme_dropdown.grid(row=1, column=1, padx=5, pady=5, sticky="ns")
+        CTkScrollableDropdown(self.theme_dropdown, values=self.available_themes, justify='center', button_color='transparent', frame_corner_radius=8, width=100, height=95, command=self._change_theme)
         
         ctk.CTkLabel(settings_col2, text="Quality:", font=self.font_normal).grid(row=2, column=0, padx=10, pady=5, sticky="wns")
-        self.priority_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_priorities, variable=self.priority_var, width=120, justify='center')
+        self.priority_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_priorities, variable=self.priority_var, width=120, justify='center', state='readonly')
         self.priority_dropdown.grid(row=2, column=1, padx=5, pady=5, sticky="ns")
+        CTkScrollableDropdown(self.priority_dropdown, values=self.available_priorities, justify='center', button_color='transparent', frame_corner_radius=8, width=100, height=95)
         
         ctk.CTkLabel(settings_col2, text="Embed:", font=self.font_normal).grid(row=3, column=0, padx=10, pady=5, sticky="wns")
-        self.embedding_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_embedding, variable=self.embedding_var, width=120, justify='center')
+        self.embedding_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_embedding, variable=self.embedding_var, width=120, justify='center', state='readonly')
         self.embedding_dropdown.grid(row=3, column=1, padx=5, pady=5, sticky="ns")
+        CTkScrollableDropdown(self.embedding_dropdown, values=self.available_embedding, justify='center', button_color='transparent', frame_corner_radius=8, width=100, height=70)
         
         # Settings Column 3 - Switches
         settings_col3 = ctk.CTkFrame(settings_row, fg_color="transparent")
@@ -825,6 +837,38 @@ Configuration of application behavior:
         elif not self.available_models:
             pass
 
+    def _auto_fetch_models(self):
+        """Silently fetch models if the current provider has API keys.
+        Unlike _fetch_models, this skips quietly when no keys are present."""
+        provider = self.provider_var.get()
+        keys = list(self.api_keys_by_provider.get(provider, []))
+        if not keys:
+            return
+        self._log(f"Auto-fetching model list for {provider}...", "info")
+        if hasattr(self, "save_api_button"):
+            self.save_api_button.configure(state="disabled")
+
+        def _do_auto():
+            try:
+                from src.api import provider_manager
+                base_url = None
+                if provider == provider_manager.PROVIDER_CUSTOM:
+                    base_url = getattr(self, "_custom_base_url_var", tk.StringVar()).get().strip()
+                    if not base_url:
+                        return
+                models = provider_manager.fetch_models(provider, keys[0], base_url)
+                if models:
+                    self.after(0, lambda m=models: self._apply_fetched_models(provider, m))
+            except Exception:
+                pass
+            finally:
+                self.after(0, lambda: (
+                    self.save_api_button.configure(state="normal")
+                    if hasattr(self, "save_api_button") else None
+                ))
+
+        threading.Thread(target=_do_auto, daemon=True).start()
+
     def _fetch_models(self):
         """Fetch available models from the selected provider via its API."""
         provider = self.provider_var.get()
@@ -871,11 +915,14 @@ Configuration of application behavior:
         self.available_models = list(models)
         if hasattr(self, "model_dropdown"):
             self.model_dropdown.configure(values=self.available_models)
+        if hasattr(self, "_model_scrollable"):
+            self._model_scrollable.configure(values=self.available_models)
         current = self.model_var.get()
-        if current not in self.available_models and self.available_models:
-            self.model_var.set(self.available_models[0])
-            if hasattr(self, "model_dropdown"):
-                self.model_dropdown.set(self.available_models[0])
+        if self.available_models:
+            if current not in self.available_models:
+                self.model_var.set(self.available_models[0])
+                if hasattr(self, "model_dropdown"):
+                    self.model_dropdown.set(self.available_models[0])
         self._log(f"Fetched {len(models)} models for {provider}.", "success")
 
     def _update_base_url_field(self):
@@ -901,17 +948,35 @@ Configuration of application behavior:
         if hasattr(self, "model_var"):
             self._models_by_provider.setdefault(self.selected_provider, [])
 
+        self._sync_actual_keys_from_textbox()
         self._persist_current_provider_keys()
+
+        # Save current model selection for the old provider
+        if hasattr(self, "model_var"):
+            old_model = self.model_var.get()
+            if old_model:
+                self._selected_model_by_provider[self.selected_provider] = old_model
+
         self.selected_provider = provider
         self.provider_var.set(provider)
         self._load_provider_keys(provider)
         self._refresh_provider_models(provider)
+
+        # Restore previously selected model for the new provider
+        saved_model = self._selected_model_by_provider.get(provider, "")
+        if saved_model and saved_model in self.available_models:
+            self.model_var.set(saved_model)
+            if hasattr(self, "model_dropdown"):
+                self.model_dropdown.set(saved_model)
+
         self._update_base_url_field()
         try:
             self._save_settings()
         except Exception:
             pass
 
+        # Auto-fetch models for the new provider if it has API keys
+        self._auto_fetch_models()
 
     def _update_api_textbox(self):
         cursor_pos = self.api_textbox.index(tk.INSERT)
@@ -1019,6 +1084,10 @@ Configuration of application behavior:
                                 if isinstance(mlist, list):
                                     self._models_by_provider[prov] = list(mlist)
 
+                        stored_sel_models = settings.get("selected_model_by_provider", {})
+                        if isinstance(stored_sel_models, dict):
+                            self._selected_model_by_provider = dict(stored_sel_models)
+
                         self._custom_base_url_var.set(settings.get("custom_base_url", ""))
 
                         for provider_name in self.available_providers:
@@ -1062,14 +1131,20 @@ Configuration of application behavior:
                              set_console_visibility(initial_console_state)
                              self.after(50, self._update_console_toggle_text)
 
-                        stored_model = settings.get("model")
-                        if stored_model:
-                            self.model_var.set(stored_model)
                         self.keyword_count_var.set(str(settings.get("keyword_count", "49")))
                         self.priority_var.set(settings.get("priority", "Detailed"))
                         self.embedding_var.set(settings.get("embedding", "Enable"))
                         self.available_priorities = ["Detailed", "Balanced", "Less"]
                         self._refresh_provider_models(self.selected_provider)
+
+                        # Restore model: prefer per-provider map, fall back to global
+                        saved_model = self._selected_model_by_provider.get(
+                            self.selected_provider, settings.get("model", "")
+                        )
+                        if saved_model:
+                            self.model_var.set(saved_model)
+                            if hasattr(self, "model_dropdown"):
+                                self.model_dropdown.set(saved_model)
 
                         stored_base_url = settings.get("custom_base_url", "")
                         self._custom_base_url_var.set(stored_base_url)
@@ -1096,6 +1171,11 @@ Configuration of application behavior:
         provider_name = self.provider_var.get() if hasattr(self, "provider_var") else self.selected_provider
         self._ensure_provider_entry(provider_name)
         current_api_keys = list(self.api_keys_by_provider.get(provider_name, []))
+
+        # Persist current model selection for the active provider
+        current_model = self.model_var.get() if hasattr(self, "model_var") else ""
+        if current_model:
+            self._selected_model_by_provider[provider_name] = current_model
 
         settings = {
             "config_version": "1.0",
@@ -1125,6 +1205,7 @@ Configuration of application behavior:
                 name: list(models)
                 for name, models in self._models_by_provider.items()
             },
+            "selected_model_by_provider": dict(self._selected_model_by_provider),
             "custom_base_url": self._custom_base_url_var.get(),
         }
 

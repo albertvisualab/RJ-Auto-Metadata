@@ -92,8 +92,42 @@ def get_default_model(provider: str) -> str:
 
 
 def fetch_models(provider: str, api_key: str, base_url: Optional[str] = None) -> list:
-    """Stub: dynamic model fetch. Phase 2 wires UI; real fetch deferred to Phase 3."""
-    return []
+    """Fetch available model IDs from the provider's OpenAI-compatible /models endpoint."""
+    from openai import OpenAI
+
+    # Resolve endpoint URL
+    if provider == PROVIDER_CUSTOM:
+        url = (base_url or "").strip()
+        if not url:
+            log_message("Custom provider requires a Base URL to fetch models.", "warning")
+            return []
+    else:
+        url = PROVIDER_BASE_URLS.get(provider, "")
+        if not url:
+            log_message(f"No base URL configured for provider: {provider}", "warning")
+            return []
+
+    try:
+        client = OpenAI(api_key=api_key, base_url=url, timeout=15.0)
+        response = client.models.list()
+        all_ids = sorted(m.id for m in response.data)
+
+        # Filter out non-generative models (embeddings, tts, whisper, image-gen, etc.)
+        _SKIP_PREFIXES = (
+            "text-embedding", "tts-", "whisper-", "dall-e",
+            "omni-moderation", "text-moderation", "babbage",
+            "davinci", "curie", "ada",
+        )
+        filtered = [m for m in all_ids if not any(m.startswith(p) for p in _SKIP_PREFIXES)]
+        log_message(
+            f"Fetched {len(filtered)} models for {provider} "
+            f"(filtered from {len(all_ids)} total).",
+            "info",
+        )
+        return filtered
+    except Exception as exc:
+        log_message(f"Failed to fetch models for {provider}: {exc}", "error")
+        return []
 
 
 def supports_auto_rotation(provider: str) -> bool:

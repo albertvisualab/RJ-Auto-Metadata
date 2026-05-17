@@ -48,14 +48,22 @@
 - **Settings persistence**: `models_by_provider` and `custom_base_url` saved/restored in config.json
 - **`fetch_models()` stub**: Added to `provider_manager.py` — returns `[]`, real implementation deferred to Phase 3
 
+## Changes in Phase 3
+
+- **`fetch_models()` implemented**: Real implementation using OpenAI SDK `client.models.list()` for all providers; filters non-generative models (embeddings, tts, whisper, dall-e, legacy completions)
+- **CTkScrollableDropdown**: Vendored Akascape/CTkScrollableDropdown (MIT) into `src/ui/CTkScrollableDropdown/`; attached to all 5 CTkComboBox dropdowns for scrollable popup behavior; `command` callbacks passed through for provider and theme
+- **Per-provider key/model sync**: `_on_provider_change` now syncs textbox → `_actual_api_keys` before persisting; API keys, model list, URL field, and selected model all switch correctly when changing provider
+- **Per-provider model selection**: `_selected_model_by_provider` dict tracks last-selected model per provider; persisted in `config.json`; restored on launch and provider switch
+- **Readonly dropdowns**: All 5 CTkComboBox set to `state='readonly'` to prevent manual text entry
+- **Auto-fetch models**: On app launch and provider switch, models are auto-fetched in background if API keys exist; silent skip when no keys (first use)
+
 ## Remaining Technical Debt
 
-- **`fetch_models()` stub**: Returns empty list; Phase 3 implements real `GET /v1/models` calls
-- **Vision model filtering**: Not implemented; deferred to Phase 3
+- **Vision model filtering**: Basic prefix filter applied; no vision-specific detection yet
 
 ## Pending Phases
 
-- **Phase 3**: Integration & Release — implement `fetch_models()`, final testing, merge to main
+- Final integration testing across all providers, merge `dev` → `main`, tag new release
 
 ## Last Verified Working
 

@@ -49,11 +49,24 @@
 - `fetch_models()` in `provider_manager.py` is a **stub** (returns `[]`) — Phase 3 implements real `GET /v1/models` API calls
 - Vision model filtering not implemented — deferred to Phase 3
 
+## Phase 3 Status: Complete
+
+### What Was Done
+
+- **fetch_models()**: Replaced stub with real implementation using OpenAI SDK `client.models.list()` endpoint; resolves base URL from `PROVIDER_BASE_URLS` for built-in providers or user-supplied URL for Custom; filters non-generative model IDs via `_SKIP_PREFIXES`
+- **CTkScrollableDropdown**: Vendored Akascape/CTkScrollableDropdown (MIT) into `src/ui/CTkScrollableDropdown/`; attached to all 5 CTkComboBox dropdowns for scrollable popup behavior; `command` callbacks passed through for provider and theme
+- **Per-provider key sync**: `_on_provider_change` now syncs textbox before persisting; API keys, model list, URL, and selected model all switch correctly on provider change
+- **Per-provider model selection**: `_selected_model_by_provider` dict persisted in `config.json`; model restored on launch and provider switch
+- **Readonly dropdowns**: All 5 CTkComboBox set to `state='readonly'`
+- **Auto-fetch models**: `_auto_fetch_models()` runs on startup (500ms delay) and on provider switch; silently skips if no keys
+
+### What Is NOT Done / Deferred
+
+- Vision-specific model detection not implemented (basic prefix filter only)
+
 ## Next Phase
 
-**Phase 3** — Integration & Release
-
-Implement `fetch_models()` with real API calls, final integration testing across all providers, merge to main.
+Final integration testing, merge `dev` → `main`, tag new release.
 
 ## Key Decisions Already Made
 
@@ -69,10 +82,13 @@ These decisions are final. Do not re-discuss or change them.
 | Auto Retry | Hardcoded `True` in Phase 2, UI toggle removed |
 | `_clean_json_text()` | Centralized to `src/utils/json_utils.py` |
 | Load/Delete/Save buttons | Removed in Phase 2; replaced with Check + Fetch |
+| CTkScrollableDropdown | Vendored (MIT); replaces native CTkComboBox popup |
+| fetch_models() | OpenAI SDK `client.models.list()` with prefix filter |
 
-## Important Files to Read Before Phase 3
+## Important Files
 
 1. `AGENTS.md`
 2. `docs/CURRENT_STATE.md`
 3. `docs/ARCHITECTURE.md`
-4. `docs/ANALISYS_REFACTORING.md` (sections 3, 7 for model fetch)
+4. `src/ui/CTkScrollableDropdown/` — vendored scrollable dropdown widget
+5. `src/api/provider_manager.py` — fetch_models() implementation
