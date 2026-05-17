@@ -28,38 +28,42 @@ PROVIDER_OPENAI = "OpenAI"
 PROVIDER_OPENROUTER = "OpenRouter"
 PROVIDER_GROQ = "Groq"
 PROVIDER_KOBOILLM = "KoboiLLM"
+PROVIDER_CUSTOM = "Custom"
 _DEFAULT_PROVIDER = PROVIDER_GEMINI
+
+PROVIDER_BASE_URLS = {
+    PROVIDER_GEMINI: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    PROVIDER_OPENAI: "https://api.openai.com/v1",
+    PROVIDER_OPENROUTER: "https://openrouter.ai/api/v1",
+    PROVIDER_GROQ: "https://api.groq.com/openai/v1",
+    PROVIDER_KOBOILLM: "https://litellm.koboi2026.biz.id",
+    PROVIDER_CUSTOM: "",
+}
 
 _PROVIDERS = {
     PROVIDER_GEMINI: {
         "module": gemini_api,
-        "models": list(gemini_api.GEMINI_MODELS),
         "supports_auto_rotation": False,
-        "default_model": gemini_api.DEFAULT_MODEL,
     },
     PROVIDER_OPENAI: {
         "module": openai_api,
-        "models": list(openai_api.OPENAI_MODELS),
         "supports_auto_rotation": False,
-        "default_model": openai_api.DEFAULT_MODEL,
     },
     PROVIDER_OPENROUTER: {
         "module": openrouter_api,
-        "models": list(openrouter_api.OPENROUTER_MODELS),
         "supports_auto_rotation": False,
-        "default_model": openrouter_api.DEFAULT_MODEL,
     },
     PROVIDER_GROQ: {
         "module": groq_api,
-        "models": list(groq_api.GROQ_MODELS),
         "supports_auto_rotation": False,
-        "default_model": groq_api.DEFAULT_MODEL,
     },
     PROVIDER_KOBOILLM: {
         "module": koboillm_api,
-        "models": list(koboillm_api.KOBOILLM_MODELS),
         "supports_auto_rotation": False,
-        "default_model": koboillm_api.DEFAULT_MODEL,
+    },
+    PROVIDER_CUSTOM: {
+        "module": None,
+        "supports_auto_rotation": False,
     },
 }
 
@@ -78,17 +82,13 @@ def get_provider_module(provider: str):
 
 
 def get_model_choices(provider: str) -> List[str]:
-    module, provider_key = get_provider_module(provider)
-    provider_config = _PROVIDERS[provider_key]
-    models = provider_config["models"]
-    if provider_config.get("supports_auto_rotation"):
-        return ["Auto Rotation"] + models
-    return models
+    """Stub kept for UI compatibility. Returns empty list (Phase 2 adds Fetch)."""
+    return []
 
 
 def get_default_model(provider: str) -> str:
-    _, provider_key = get_provider_module(provider)
-    return _PROVIDERS[provider_key]["default_model"]
+    """Stub kept for UI compatibility. Returns empty string (Phase 2 adds Fetch)."""
+    return ""
 
 
 def supports_auto_rotation(provider: str) -> bool:
@@ -98,9 +98,13 @@ def supports_auto_rotation(provider: str) -> bool:
 
 def select_api_key(provider: str, api_keys: Iterable[str]):
     module, provider_key = get_provider_module(provider)
-    if provider_key == PROVIDER_GEMINI:
-        return module.select_smart_api_key(list(api_keys))
-    return module.select_api_key(list(api_keys))
+    if module is None:
+        keys = list(api_keys)
+        return keys[0] if keys else None
+    if hasattr(module, "select_api_key"):
+        return module.select_api_key(list(api_keys))
+    keys = list(api_keys)
+    return keys[0] if keys else None
 
 
 def get_metadata(
@@ -114,6 +118,7 @@ def get_metadata(
     keyword_count: str = "49",
     priority: str = "Detailed",
     is_vector_conversion: bool = False,
+    base_url_override: Optional[str] = None,
 ):
     module, provider_key = get_provider_module(provider)
 
@@ -176,7 +181,29 @@ def get_metadata(
 
         metadata["tags"] = final_tags[:limit]
         return metadata
+
     effective_model = selected_model
+
+    if provider_key == PROVIDER_CUSTOM:
+        effective_base_url = (base_url_override or "").strip()
+        if not effective_base_url:
+            log_message("Custom provider requires a base_url_override.", "error")
+            return {"error": "custom_provider_no_base_url"}
+        result = openrouter_api.get_openrouter_metadata(
+            image_path,
+            api_key,
+            stop_event,
+            use_png_prompt=use_png_prompt,
+            use_video_prompt=use_video_prompt,
+            selected_model_input=effective_model,
+            keyword_count=keyword_count,
+            priority=priority,
+            is_vector_conversion=is_vector_conversion,
+        )
+        if isinstance(result, dict) and "error" not in result:
+            return _fill_keywords_if_short(result, keyword_count)
+        return result
+
     if provider_key == PROVIDER_GEMINI:
         if selected_model in (None, "", "Auto Rotation"):
             effective_model = None
@@ -256,7 +283,9 @@ def get_metadata(
 
 
 def check_api_keys_status(provider: str, api_keys: Iterable[str], model: Optional[str] = None):
-    module, _ = get_provider_module(provider)
+    module, provider_key = get_provider_module(provider)
+    if module is None:
+        return {k: (-1, "No module for this provider") for k in api_keys}
     return module.check_api_keys_status(list(api_keys), model=model)
 
 
@@ -264,11 +293,11 @@ def set_force_stop(provider: Optional[str] = None) -> None:
     if provider is None:
         for provider_name in list_providers():
             module, _ = get_provider_module(provider_name)
-            if hasattr(module, "set_force_stop"):
+            if module is not None and hasattr(module, "set_force_stop"):
                 module.set_force_stop()
         return
     module, _ = get_provider_module(provider)
-    if hasattr(module, "set_force_stop"):
+    if module is not None and hasattr(module, "set_force_stop"):
         module.set_force_stop()
 
 
@@ -276,11 +305,11 @@ def reset_force_stop(provider: Optional[str] = None) -> None:
     if provider is None:
         for provider_name in list_providers():
             module, _ = get_provider_module(provider_name)
-            if hasattr(module, "reset_force_stop"):
+            if module is not None and hasattr(module, "reset_force_stop"):
                 module.reset_force_stop()
         return
     module, _ = get_provider_module(provider)
-    if hasattr(module, "reset_force_stop"):
+    if module is not None and hasattr(module, "reset_force_stop"):
         module.reset_force_stop()
 
 
@@ -288,14 +317,14 @@ def is_stop_requested(provider: Optional[str] = None) -> bool:
     if provider is None:
         return any(is_stop_requested(name) for name in list_providers())
     module, _ = get_provider_module(provider)
-    if hasattr(module, "is_stop_requested"):
+    if module is not None and hasattr(module, "is_stop_requested"):
         return module.is_stop_requested()
     return False
 
 
 def check_stop_event(provider: str, stop_event, message: Optional[str] = None) -> bool:
     module, _ = get_provider_module(provider)
-    if hasattr(module, "check_stop_event"):
+    if module is not None and hasattr(module, "check_stop_event"):
         return module.check_stop_event(stop_event, message)
     if stop_event is not None:
         try:

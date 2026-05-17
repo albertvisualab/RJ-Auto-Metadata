@@ -14,17 +14,21 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-# src/utils/logging.py
-_log_handler = None
+# src/utils/json_utils.py
+from __future__ import annotations
+import re
 
-_TERMINAL_PRINT_TAGS = {"warning", "error", "critical", "success"}
-
-def set_log_handler(handler):
-    global _log_handler
-    _log_handler = handler
-
-def log_message(message, tag=None):
-    if tag is None or tag.lower() in _TERMINAL_PRINT_TAGS:
-        print(message)
-    if _log_handler is not None:
-        _log_handler(message, tag)
+def _clean_json_text(text: str) -> str:
+    """Strip think-tags and markdown fences; extract the first JSON object."""
+    if not text:
+        return ""
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    pattern = r"```(?:json)?\s*(.*?)\s*```"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    start_idx = text.find("{")
+    end_idx = text.rfind("}")
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        return text[start_idx : end_idx + 1]
+    return text.strip()

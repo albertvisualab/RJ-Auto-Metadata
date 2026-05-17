@@ -1,6 +1,6 @@
 # Current State — RJ Auto Metadata
 
-> Snapshot at Phase 0 completion.
+> Snapshot at Phase 1 completion.
 
 ## Version
 
@@ -10,40 +10,42 @@
 
 - `main` — stable release baseline (v3.11.3)
 - `dev` — integration branch (created in Phase 0)
-- `task/docs-governance` — Phase 0 work branch
+- `task/docs-governance` — Phase 0 work branch (merged to dev)
+- `task/refactor-backend` — Phase 1 work branch (current)
 
 ## Supported Providers
 
-| Provider | Current Endpoint Type | Status |
+| Provider | Endpoint Type | Status |
 |---|---|---|
-| **Gemini** | Native REST (`generateContent`) | To be migrated to OpenAI compat |
-| **OpenAI** | Responses API (`/v1/responses`) | Staying as Responses API |
-| **OpenRouter** | Chat Completions | No change planned |
-| **Groq** | Chat Completions | No change planned |
-| **KoboiLLM** | Chat Completions | No change planned |
+| **Gemini** | OpenAI compat (`v1beta/openai/`) | Migrated in Phase 1 |
+| **OpenAI** | Responses API (`/v1/responses`) | Unchanged |
+| **OpenRouter** | Chat Completions | Unchanged |
+| **Groq** | Chat Completions | Unchanged |
+| **KoboiLLM** | Chat Completions | Unchanged |
+| **Custom** | User-defined base URL | Added in Phase 1 |
 
-## Known Technical Debt
+## Technical Debt Resolved in Phase 1
 
-- **Hardcoded model presets**: ~50+ model IDs spread across all 5 `*_api.py` files (`GEMINI_MODELS`, `OPENAI_MODEL_PRESETS`, `OPENROUTER_MODEL_PRESETS`, `GROQ_MODEL_PRESETS`, `KOBOILLM_MODEL_PRESETS`)
-- **Gemini native REST**: Only provider not using OpenAI-compatible endpoint; requires separate SDK/REST dual path (~770 lines in `gemini_api.py`)
-- **Duplicate `_clean_json_text()`**: Identical function copied in `openrouter_api.py`, `koboillm_api.py`, and `openai_api.py`
-- **Gemini Auto Rotation**: Model rotation logic (`select_next_model`, `wait_for_model_cooldown`, `MODEL_LOCK`) — to be removed
-- **Dead code**: `calculate_smart_delay()`, `DEBUG_FORCE_FAILURE`, commented-out debug blocks in `groq_api.py`, `openrouter_api.py`, `openai_api.py`
-- **Noisy terminal output**: All log severity levels printed to terminal; no filter for warning/error only
-- **Duplicate `gpt-4o`**: Appears twice in `_STRUCTURED_OUTPUT_MODEL_PREFIXES` in `openai_api.py`
+- **Hardcoded model presets**: Removed from all 5 `*_api.py` files; `get_model_choices()` / `get_default_model()` stubbed for UI compat (Phase 2 adds Fetch button)
+- **Gemini native REST**: Replaced ~770-line SDK/REST dual path with ~300-line OpenAI SDK implementation
+- **Duplicate `_clean_json_text()`**: Centralized to `src/utils/json_utils.py`; removed from `openai_api.py`, `openrouter_api.py`, `koboillm_api.py`
+- **Gemini Auto Rotation**: Removed entirely (model rotation logic, cooldowns, locks)
+- **Dead code**: Removed `calculate_smart_delay()`, `DEBUG_FORCE_FAILURE`, commented-out debug blocks
+- **Noisy terminal output**: Added `_TERMINAL_PRINT_TAGS` filter — only warning/error/critical/success print to terminal
+- **Duplicate `gpt-4o`**: Fixed in `_STRUCTURED_OUTPUT_MODEL_PREFIXES`
+- **`PROVIDER_BASE_URLS`**: Added to `provider_manager.py` with all 6 provider URLs
+- **Custom provider**: Added as 6th provider with `base_url_override` dispatch
 
-## UI Current State
+## Remaining Technical Debt
 
-- **Save/Load/Delete buttons**: Exist for API key file management — to be replaced (Save → Fetch, Load/Delete removed)
-- **Auto Retry toggle**: Exists as UI switch — to be removed (hardcoded `True` in backend)
-- **Model dropdown**: Populated from hardcoded presets — to be replaced with dynamic fetch
-- **Provider dropdown**: Located in `api_paid_frame` — to be moved up in layout
-- **Custom provider**: Not yet supported — to be added as 6th option
+- **UI model dropdown**: Currently receives empty list from stubbed `get_model_choices()` — Phase 2 will add Fetch button
+- **Auto Retry toggle**: Still exists as UI switch — Phase 2 will remove and hardcode `True`
+- **UI layout**: Provider/Model dropdowns not yet restructured — Phase 2
 
 ## Pending Phases
 
-- **Phase 1**: Backend refactor (`task/refactor-backend`) — items B1–B9, U1–U2
 - **Phase 2**: UI refactor (`task/refactor-ui`) — items UI1–UI11
+- **Phase 3**: Integration & Release
 
 ## Last Verified Working
 

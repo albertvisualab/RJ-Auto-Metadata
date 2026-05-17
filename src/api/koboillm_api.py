@@ -29,21 +29,7 @@ import re
 
 from src.api.prompts import select_prompt
 from src.utils.logging import log_message
-
-def _clean_json_text(text: str) -> str:
-    if not text:
-        return ""
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
-    pattern = r"```(?:json)?\s*(.*?)\s*```"
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    start_idx = text.find("{")
-    end_idx = text.rfind("}")
-    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-        return text[start_idx : end_idx + 1]
-    
-    return text.strip()
+from src.utils.json_utils import _clean_json_text
 
 API_ENDPOINT = "https://litellm.koboi2026.biz.id/chat/completions"
 API_TIMEOUT = 60
@@ -51,67 +37,6 @@ API_MAX_RETRIES = 2
 RETRY_DELAY_SECONDS = 8
 MAX_OUTPUT_TOKENS: Optional[int] = None
 FORCE_STOP_FLAG = False
-
-KOBOILLM_MODEL_PRESETS: Dict[str, Dict[str, Optional[Union[str, int, float]]]] = {
-	# "openai/gpt-5": {
-	# 	"api_model": "openai/gpt-5",
-	# 	"temperature": 0.2,
-	# 	"max_output_tokens": 5120,
-	# },
-	"openai/gpt-5-mini": {
-		"api_model": "openai/gpt-5-mini",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-5-nano": {
-		"api_model": "openai/gpt-5-nano",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-4.1": {
-		"api_model": "openai/gpt-4.1",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-4.1-mini": {
-		"api_model": "openai/gpt-4.1-mini",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-4.1-nano": {
-		"api_model": "openai/gpt-4.1-nano",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"gemini/gemini-2.5-pro": {
-		"api_model": "gemini/gemini-2.5-pro",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"gemini/gemini-2.5-flash": {
-		"api_model": "gemini/gemini-2.5-flash",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"gemini/gemini-2.5-flash-lite": {
-		"api_model": "gemini/gemini-2.5-flash-lite",
-		"temperature": 0.3,
-		"max_output_tokens": 5120,
-	},
-	"gemini/gemini-2.0-flash": {
-		"api_model": "gemini/gemini-2.0-flash",
-		"temperature": 0.3,
-		"max_output_tokens": 5120,
-	},
-	"gemini/gemini-2.0-flash-lite": {
-		"api_model": "gemini/gemini-2.0-flash-lite",
-		"temperature": 0.3,
-		"max_output_tokens": 5120,
-	},
-}
-
-KOBOILLM_MODELS: List[str] = list(KOBOILLM_MODEL_PRESETS.keys())
-DEFAULT_MODEL = "gemini/gemini-2.5-flash"
 
 _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 _STRUCTURED_OUTPUT_MODEL_PREFIXES: Tuple[str, ...] = (
@@ -413,22 +338,12 @@ def get_koboillm_metadata(
 	if check_stop_event(stop_event, "KoboiLLM request cancelled before submission"):
 		return "stopped"
 
-	model_to_use = (selected_model_input or DEFAULT_MODEL).strip()
-	if model_to_use not in KOBOILLM_MODELS:
-		log_message(
-			f"Unknown KoboiLLM model '{model_to_use}', falling back to {DEFAULT_MODEL}",
-			"warning",
-		)
-		model_to_use = DEFAULT_MODEL
-
-	model_settings = KOBOILLM_MODEL_PRESETS.get(model_to_use, {"api_model": model_to_use})
-	api_model = model_settings.get("api_model", model_to_use)
-	reasoning_effort = model_settings.get("reasoning_effort")
-	verbosity = model_settings.get("verbosity")
-	temperature = model_settings.get("temperature")
-	max_output_tokens = model_settings.get("max_output_tokens")
-	if MAX_OUTPUT_TOKENS is not None:
-		max_output_tokens = MAX_OUTPUT_TOKENS
+	model_to_use = (selected_model_input or "gemini/gemini-2.5-flash").strip()
+	api_model = model_to_use
+	reasoning_effort = None
+	verbosity = None
+	temperature = 0.2
+	max_output_tokens = MAX_OUTPUT_TOKENS if MAX_OUTPUT_TOKENS is not None else 5120
 
 	prompt_text = select_prompt(
 		priority,
@@ -561,9 +476,8 @@ def get_koboillm_metadata(
 
 def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) -> dict:
 	results: Dict[str, Tuple[int, str]] = {}
-	test_model = (model or DEFAULT_MODEL).strip()
-	model_settings = KOBOILLM_MODEL_PRESETS.get(test_model, {"api_model": test_model})
-	api_model = model_settings.get("api_model", test_model)
+	test_model = (model or "gemini/gemini-2.5-flash").strip()
+	api_model = test_model
 
 	payload = {
 		"model": api_model,
@@ -590,13 +504,8 @@ def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) 
 	if _model_supports_structured_outputs(api_model):
 		payload["response_format"] = {"type": "json_object"}
 
-	if model_settings.get("temperature") is not None:
-		payload["temperature"] = model_settings.get("temperature")
-	else:
-		payload["temperature"] = 0.2
-
-	if model_settings.get("max_output_tokens"):
-		payload["max_tokens"] = model_settings["max_output_tokens"]
+	payload["temperature"] = 0.2
+	payload["max_tokens"] = 5120
 
 	for key in api_keys:
 		headers = {

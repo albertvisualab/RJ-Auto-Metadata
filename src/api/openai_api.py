@@ -28,21 +28,7 @@ import requests
 
 from src.api.prompts import select_prompt
 from src.utils.logging import log_message
-
-def _clean_json_text(text: str) -> str:
-    if not text:
-        return ""
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
-    pattern = r"```(?:json)?\s*(.*?)\s*```"
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    start_idx = text.find("{")
-    end_idx = text.rfind("}")
-    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-        return text[start_idx : end_idx + 1]
-
-    return text.strip()
+from src.utils.json_utils import _clean_json_text
 
 API_ENDPOINT = "https://api.openai.com/v1/responses"
 API_TIMEOUT = 60
@@ -50,68 +36,6 @@ API_MAX_RETRIES = 2
 RETRY_DELAY_SECONDS = 8
 MAX_OUTPUT_TOKENS = None
 FORCE_STOP_FLAG = False
-
-OPENAI_MODEL_PRESETS: Dict[str, Dict[str, Optional[Union[str, int, float]]]] = {
-    "gpt-5": {
-        "api_model": "gpt-5",
-        "reasoning_effort": "medium",
-        "verbosity": "medium",
-        "max_output_tokens": 5120,
-    },
-    "gpt-5-mini": {
-        "api_model": "gpt-5-mini",
-        "reasoning_effort": "medium",
-        "verbosity": "medium",
-        "max_output_tokens": 5120,
-    },
-    "gpt-5-nano": {
-        "api_model": "gpt-5-nano",
-        "reasoning_effort": "medium",
-        "verbosity": "medium",
-        "max_output_tokens": 5120,
-    },
-    "gpt-5 (low)": {
-        "api_model": "gpt-5",
-        "reasoning_effort": "low",
-        "verbosity": "low",
-        "max_output_tokens": 5120,
-    },
-    "gpt-5-mini (low)": {
-        "api_model": "gpt-5-mini",
-        "reasoning_effort": "low",
-        "verbosity": "low",
-        "max_output_tokens": 5120,
-    },
-    "gpt-5-nano (low)": {
-        "api_model": "gpt-5-nano",
-        "reasoning_effort": "low",
-        "verbosity": "low",
-        "max_output_tokens": 5120,
-    },
-    "gpt-4.1": {
-        "api_model": "gpt-4.1",
-        "temperature": 0.4,
-    },
-    "gpt-4.1-mini": {
-        "api_model": "gpt-4.1-mini",
-        "temperature": 0.3,
-    },
-    "gpt-4.1-nano": {
-        "api_model": "gpt-4.1-nano",
-        "temperature": 0.2,
-    },
-    "gpt-4o": {
-        "api_model": "gpt-4o",
-        "temperature": 0.2,
-    },
-    "gpt-4o-mini": {
-        "api_model": "gpt-4o-mini",
-        "temperature": 0.2,
-    },
-}
-
-OPENAI_MODELS: List[str] = list(OPENAI_MODEL_PRESETS.keys())
-DEFAULT_MODEL = OPENAI_MODELS[0]
 
 _API_KEY_LOCK = threading.Lock()
 _API_KEY_INDEX = 0
@@ -122,7 +46,6 @@ _STRUCTURED_OUTPUT_MODEL_PREFIXES: Tuple[str, ...] = (
     "gpt-4.1-nano",
     "gpt-4o",
     "gpt-4o-mini",
-    "gpt-4o",
     "gpt-5",
     "gpt-5-mini",
     "gpt-5-nano",
@@ -333,10 +256,6 @@ def _extract_metadata_from_json(raw_json: dict, keyword_count: Union[str, int]):
     else:
         tags = []
     tags = list(dict.fromkeys(tags))[:keyword_limit]
-    # try:
-    #     log_message(f"[OpenAI] Raw keywords: {len(raw_keywords)}, after dedup/limit: {len(tags)} (limit {keyword_limit})", "debug")
-    # except Exception:
-    #     pass
     return {
         "title": raw_json.get("title", ""),
         "description": raw_json.get("description", ""),
@@ -495,19 +414,12 @@ def get_openai_metadata(
     if check_stop_event(stop_event, "OpenAI request cancelled before submission"):
         return "stopped"
 
-    model_to_use = (selected_model_input or DEFAULT_MODEL).strip()
-    if model_to_use not in OPENAI_MODELS:
-        log_message(f"Unknown OpenAI model '{model_to_use}', falling back to {DEFAULT_MODEL}", "warning")
-        model_to_use = DEFAULT_MODEL
-
-    model_settings = OPENAI_MODEL_PRESETS.get(model_to_use, {"api_model": model_to_use})
-    api_model = model_settings.get("api_model", model_to_use)
-    reasoning_effort = model_settings.get("reasoning_effort")
-    verbosity = model_settings.get("verbosity")
-    temperature = model_settings.get("temperature")
-    max_output_tokens = model_settings.get("max_output_tokens")
-    if MAX_OUTPUT_TOKENS is not None:
-        max_output_tokens = MAX_OUTPUT_TOKENS
+    model_to_use = (selected_model_input or "gpt-4.1-mini").strip()
+    api_model = model_to_use
+    reasoning_effort = "medium" if _is_gpt5_model(model_to_use) else None
+    verbosity = None
+    temperature = 0.2
+    max_output_tokens = MAX_OUTPUT_TOKENS
 
     prompt_text = select_prompt(
         priority,
@@ -622,9 +534,8 @@ def get_openai_metadata(
 
 def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) -> dict:
     results = {}
-    test_model = (model or DEFAULT_MODEL).strip()
-    model_settings = OPENAI_MODEL_PRESETS.get(test_model, {"api_model": test_model})
-    api_model = model_settings.get("api_model", test_model)
+    test_model = (model or "gpt-4.1-mini").strip()
+    api_model = test_model
     payload = {
         "model": api_model,
         "input": [
@@ -649,15 +560,10 @@ def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) 
                 "strict": True,
             }
         }
-        if _is_gpt5_model(api_model):
-            verbosity = model_settings.get("verbosity")
-            if verbosity:
-                payload["text"]["verbosity"] = verbosity
-
     if _is_gpt5_model(api_model):
-        payload["reasoning"] = {"effort": model_settings.get("reasoning_effort", "medium")}
+        payload["reasoning"] = {"effort": "medium"}
     else:
-        payload["temperature"] = model_settings.get("temperature", 0.2)
+        payload["temperature"] = 0.2
 
     for key in api_keys:
         headers = {

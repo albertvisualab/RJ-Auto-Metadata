@@ -29,21 +29,7 @@ import re
 
 from src.api.prompts import select_prompt
 from src.utils.logging import log_message
-
-def _clean_json_text(text: str) -> str:
-    if not text:
-        return ""
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
-    pattern = r"```(?:json)?\s*(.*?)\s*```"
-    match = re.search(pattern, text, re.DOTALL)
-    if match:
-        return match.group(1).strip()
-    start_idx = text.find("{")
-    end_idx = text.rfind("}")
-    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-        return text[start_idx : end_idx + 1]
-
-    return text.strip()
+from src.utils.json_utils import _clean_json_text
 
 API_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 API_TIMEOUT = 60
@@ -55,116 +41,6 @@ FORCE_STOP_FLAG = False
 OPENROUTER_HTTP_REFERER = os.getenv("OPENROUTER_HTTP_REFERER")
 OPENROUTER_TITLE = os.getenv("OPENROUTER_APP_TITLE")
 
-
-def _build_display_name(base: str, variant: str | None = None) -> str:
-	if not variant:
-		return base
-	return f"{base} ({variant})"
-
-
-OPENROUTER_MODEL_PRESETS: Dict[str, Dict[str, Optional[Union[str, int, float]]]] = {
-	"openai/gpt-5": {
-		"api_model": "openai/gpt-5",
-		"reasoning_effort": "medium",
-		"verbosity": "low",
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-5-mini": {
-		"api_model": "openai/gpt-5-mini",
-		"reasoning_effort": "low",
-		"verbosity": "low",
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-5-nano": {
-		"api_model": "openai/gpt-5-nano",
-		"reasoning_effort": "low",
-		"verbosity": "low",
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-4.1": {
-		"api_model": "openai/gpt-4.1",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-4.1-mini": {
-		"api_model": "openai/gpt-4.1-mini",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"openai/gpt-4.1-nano": {
-		"api_model": "openai/gpt-4.1-nano",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"google/gemini-2.5-pro": {
-		"api_model": "google/gemini-2.5-pro",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"google/gemini-2.5-flash": {
-		"api_model": "google/gemini-2.5-flash",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"google/gemini-2.5-flash-lite": {
-		"api_model": "google/gemini-2.5-flash-lite",
-		"temperature": 0.3,
-		"max_output_tokens": 5120,
-	},
-	"google/gemini-2.0-flash-001": {
-		"api_model": "google/gemini-2.0-flash-001",
-		"temperature": 0.3,
-		"max_output_tokens": 5120,
-	},
-	"google/gemini-2.0-flash-lite-001": {
-		"api_model": "google/gemini-2.0-flash-lite-001",
-		"temperature": 0.3,
-		"max_output_tokens": 5120,
-	},
-	"anthropic/claude-sonnet-4": {
-		"api_model": "anthropic/claude-sonnet-4",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"anthropic/claude-3.7-sonnet": {
-		"api_model": "anthropic/claude-3.7-sonnet",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"anthropic/claude-3.5-sonnet": {
-		"api_model": "anthropic/claude-3.5-sonnet",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"anthropic/claude-3.5-haiku": {
-		"api_model": "anthropic/claude-3.5-haiku",
-		"temperature": 0.2,
-		"max_output_tokens": 5120,
-	},
-	"x-ai/grok-4": {
-		"api_model": "x-ai/grok-4",
-		"temperature": 0.25,
-		"max_output_tokens": 5120,
-	},
-	"x-ai/grok-4-fast": {
-		"api_model": "x-ai/grok-4-fast",
-		"temperature": 0.25,
-		"max_output_tokens": 5120,
-	},
-	"meta-llama/llama-4-maverick": {
-		"api_model": "meta-llama/llama-4-maverick",
-		"temperature": 0.25,
-		"max_output_tokens": 5120,
-	},
-	"meta-llama/llama-4-scout": {
-		"api_model": "meta-llama/llama-4-scout",
-		"temperature": 0.25,
-		"max_output_tokens": 5120,
-	},
-}
-
-OPENROUTER_MODELS: List[str] = list(OPENROUTER_MODEL_PRESETS.keys())
-DEFAULT_MODEL = "openai/gpt-5"
 
 _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 _STRUCTURED_OUTPUT_MODEL_PREFIXES: Tuple[str, ...] = (
@@ -396,10 +272,6 @@ def _extract_metadata_from_json(raw_json: dict, keyword_count: Union[str, int]) 
 	else:
 		tags = []
 	tags = list(dict.fromkeys(tags))[:keyword_limit]
-	# try:
-	# 	log_message(f"[OpenRouter] Raw keywords: {len(raw_keywords)}, after dedup/limit: {len(tags)} (limit {keyword_limit})", "debug")
-	# except Exception:
-	# 	pass
 	return {
 		"title": raw_json.get("title", ""),
 		"description": raw_json.get("description", ""),
@@ -511,22 +383,12 @@ def get_openrouter_metadata(
 	if check_stop_event(stop_event, "OpenRouter request cancelled before submission"):
 		return "stopped"
 
-	model_to_use = (selected_model_input or DEFAULT_MODEL).strip()
-	if model_to_use not in OPENROUTER_MODELS:
-		log_message(
-			f"Unknown OpenRouter model '{model_to_use}', falling back to {DEFAULT_MODEL}",
-			"warning",
-		)
-		model_to_use = DEFAULT_MODEL
-
-	model_settings = OPENROUTER_MODEL_PRESETS.get(model_to_use, {"api_model": model_to_use})
-	api_model = model_settings.get("api_model", model_to_use)
-	reasoning_effort = model_settings.get("reasoning_effort")
-	verbosity = model_settings.get("verbosity")
-	temperature = model_settings.get("temperature")
-	max_output_tokens = model_settings.get("max_output_tokens")
-	if MAX_OUTPUT_TOKENS is not None:
-		max_output_tokens = MAX_OUTPUT_TOKENS
+	model_to_use = (selected_model_input or "openai/gpt-4.1").strip()
+	api_model = model_to_use
+	reasoning_effort = None
+	verbosity = None
+	temperature = 0.2
+	max_output_tokens = MAX_OUTPUT_TOKENS if MAX_OUTPUT_TOKENS is not None else 5120
 
 	prompt_text = select_prompt(
 		priority,
@@ -670,9 +532,8 @@ def get_openrouter_metadata(
 
 def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) -> dict:
 	results: Dict[str, Tuple[int, str]] = {}
-	test_model = (model or DEFAULT_MODEL).strip()
-	model_settings = OPENROUTER_MODEL_PRESETS.get(test_model, {"api_model": test_model})
-	api_model = model_settings.get("api_model", test_model)
+	test_model = (model or "openai/gpt-4.1").strip()
+	api_model = test_model
 
 	payload = {
 		"model": api_model,
@@ -699,13 +560,8 @@ def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) 
 	if _model_supports_structured_outputs(api_model):
 		payload["response_format"] = {"type": "json_object"}
 
-	if model_settings.get("temperature") is not None:
-		payload["temperature"] = model_settings.get("temperature")
-	else:
-		payload["temperature"] = 0.2
-
-	if model_settings.get("max_output_tokens"):
-		payload["max_tokens"] = model_settings["max_output_tokens"]
+	payload["temperature"] = 0.2
+	payload["max_tokens"] = 5120
 
 	for key in api_keys:
 		headers = {

@@ -36,24 +36,6 @@ RETRY_DELAY_SECONDS = 8
 MAX_OUTPUT_TOKENS: Optional[int] = None
 FORCE_STOP_FLAG = False
 
-GROQ_MODEL_PRESETS: Dict[str, Dict[str, Optional[Union[str, int, float]]]] = {
-    "Llama 4 Scout": {
-        "api_model": "meta-llama/llama-4-scout-17b-16e-instruct",
-        "temperature": 0.5,
-        "max_output_tokens": 4096,
-        "description": "Llama 4 Scout (Vision capable)",
-    },
-    "Llama 4 Maverick": {
-        "api_model": "meta-llama/llama-4-maverick-17b-128e-instruct",
-        "temperature": 0.5,
-        "max_output_tokens": 4096,
-        "description": "Llama 4 Maverick (Vision capable)",
-    },
-}
-
-GROQ_MODELS: List[str] = list(GROQ_MODEL_PRESETS.keys())
-DEFAULT_MODEL = "Llama 4 Maverick"
-
 _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 _API_KEY_LOCK = threading.Lock()
 _API_KEY_INDEX = 0
@@ -203,10 +185,6 @@ def _extract_metadata_from_json(raw_json: dict, keyword_count: Union[str, int]) 
     else:
         tags = []
     tags = list(dict.fromkeys(tags))[:keyword_limit]
-    # try:
-    #     log_message(f"[Groq] Raw keywords: {len(raw_keywords)}, after dedup/limit: {len(tags)} (limit {keyword_limit})", "debug")
-    # except Exception:
-    #     pass
     return {
         "title": raw_json.get("title", ""),
         "description": raw_json.get("description", ""),
@@ -262,20 +240,10 @@ def get_groq_metadata(
     if check_stop_event(stop_event, "Groq request cancelled before submission"):
         return "stopped"
 
-    model_to_use = (selected_model_input or DEFAULT_MODEL).strip()
-    if model_to_use not in GROQ_MODELS:
-        log_message(
-            f"Unknown Groq model '{model_to_use}', falling back to {DEFAULT_MODEL}",
-            "warning",
-        )
-        model_to_use = DEFAULT_MODEL
-
-    model_settings = GROQ_MODEL_PRESETS.get(model_to_use, {"api_model": model_to_use})
-    api_model = model_settings.get("api_model", model_to_use)
-    temperature = model_settings.get("temperature")
-    max_output_tokens = model_settings.get("max_output_tokens")
-    if MAX_OUTPUT_TOKENS is not None:
-        max_output_tokens = MAX_OUTPUT_TOKENS
+    model_to_use = (selected_model_input or "meta-llama/llama-4-maverick-17b-128e-instruct").strip()
+    api_model = model_to_use
+    temperature = 0.5
+    max_output_tokens = MAX_OUTPUT_TOKENS if MAX_OUTPUT_TOKENS is not None else 4096
 
     prompt_text = select_prompt(
         priority,
@@ -399,9 +367,8 @@ def get_groq_metadata(
 
 def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) -> dict:
     results: Dict[str, Tuple[int, str]] = {}
-    test_model = (model or DEFAULT_MODEL).strip()
-    model_settings = GROQ_MODEL_PRESETS.get(test_model, {"api_model": test_model})
-    api_model = model_settings.get("api_model", test_model)
+    test_model = (model or "meta-llama/llama-4-maverick-17b-128e-instruct").strip()
+    api_model = test_model
 
     payload = {
         "model": api_model,
@@ -426,13 +393,8 @@ def check_api_keys_status(api_keys: Iterable[str], model: Optional[str] = None) 
         "response_format": {"type": "json_object"},
     }
 
-    if model_settings.get("temperature") is not None:
-        payload["temperature"] = model_settings.get("temperature")
-    else:
-        payload["temperature"] = 0.5
-
-    if model_settings.get("max_output_tokens"):
-        payload["max_completion_tokens"] = model_settings["max_output_tokens"]
+    payload["temperature"] = 0.5
+    payload["max_completion_tokens"] = 4096
 
     for key in api_keys:
         headers = {

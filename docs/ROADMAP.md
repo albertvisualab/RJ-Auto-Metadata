@@ -7,21 +7,21 @@
 - Created `AGENTS.md` at repository root
 - Created `docs/ARCHITECTURE.md`, `docs/GIT_POLICY.md`, `docs/CURRENT_STATE.md`, `docs/HANDOFF.md`, `docs/ROADMAP.md`
 
-## Phase 1: Backend Refactor (`task/refactor-backend`)
+## Phase 1: Backend Refactor (`task/refactor-backend`) — Complete
 
-| # | Item | Description |
+| # | Item | Status |
 |---|---|---|
-| B1 | Gemini → OpenAI compat | Biggest change — migrate from native REST to `v1beta/openai/` endpoint, ~600 lines removed |
-| B2 | OpenAI dead code cleanup | Keep Responses API, remove unused parsers and debug artifacts |
-| B3 | Remove hardcoded model presets | Delete all `*_MODEL_PRESETS` dicts and `DEFAULT_MODEL` constants from 5 API files |
-| B4 | Centralize `_clean_json_text()` | Move duplicate function to `src/utils/json_utils.py` |
-| B5 | Remove Gemini Auto Rotation | Delete model lock, cooldown, `select_next_model`, etc. (part of B1) |
-| B6 | Add `PROVIDER_BASE_URLS` | Add base URL mapping constant to `provider_manager.py` |
-| B7 | Add Custom provider handler | Handle `"Custom"` provider in dispatch with user-defined base URL |
-| B8 | Refactor dispatch chain | Replace if-elif chain with uniform `module.get_metadata(...)` interface |
-| B9 | Fix duplicate `gpt-4o` | Remove duplicate entry in `_STRUCTURED_OUTPUT_MODEL_PREFIXES` |
-| U1 | Terminal log severity filter | Add `_TERMINAL_PRINT_TAGS` filter in `src/utils/logging.py` |
-| U2 | Create `json_utils.py` | New shared utility at `src/utils/json_utils.py` |
+| B1 | Gemini → OpenAI compat | ✅ Done — ~470 lines removed, OpenAI SDK with `v1beta/openai/` |
+| B2 | Dead code cleanup | ✅ Done — removed debug blocks from 3 files |
+| B3 | Remove hardcoded model presets | ✅ Done — removed from all 5 API files |
+| B4 | Centralize `_clean_json_text()` | ✅ Done — moved to `src/utils/json_utils.py` |
+| B5 | Remove Gemini Auto Rotation | ✅ Done — part of B1 |
+| B6 | Add `PROVIDER_BASE_URLS` | ✅ Done — added to `provider_manager.py` |
+| B7 | Add Custom provider handler | ✅ Done — dispatches via openrouter handler |
+| B8 | Refactor dispatch chain | ✅ Done — added `base_url_override`, guarded `None` modules |
+| B9 | Fix duplicate `gpt-4o` | ✅ Done |
+| U1 | Terminal log severity filter | ✅ Done — `_TERMINAL_PRINT_TAGS` in `logging.py` |
+| U2 | Create `json_utils.py` | ✅ Done |
 
 ## Phase 2: UI Refactor (`task/refactor-ui`)
 
