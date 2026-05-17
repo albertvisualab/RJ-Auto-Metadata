@@ -91,6 +91,11 @@ def get_default_model(provider: str) -> str:
     return ""
 
 
+def fetch_models(provider: str, api_key: str, base_url: Optional[str] = None) -> list:
+    """Stub: dynamic model fetch. Phase 2 wires UI; real fetch deferred to Phase 3."""
+    return []
+
+
 def supports_auto_rotation(provider: str) -> bool:
     _, provider_key = get_provider_module(provider)
     return bool(_PROVIDERS[provider_key].get("supports_auto_rotation", False))

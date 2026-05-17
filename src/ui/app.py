@@ -81,7 +81,13 @@ class MetadataApp(ctk.CTk):
             self.available_providers = [self.selected_provider]
         if self.selected_provider not in self.available_providers:
             self.selected_provider = self.available_providers[0]
+        from src.api import provider_manager as _pm
+        if _pm.PROVIDER_CUSTOM not in self.available_providers:
+            self.available_providers.append(_pm.PROVIDER_CUSTOM)
         self.api_keys_by_provider = {name: [] for name in self.available_providers}
+        self._models_by_provider: dict[str, list] = {
+            name: [] for name in self.available_providers
+        }
         self.provider_var = tk.StringVar(value=self.selected_provider)
         self._actual_api_keys = list(self.api_keys_by_provider.get(self.selected_provider, []))
         self.stop_event = threading.Event()
@@ -143,7 +149,7 @@ class MetadataApp(ctk.CTk):
 
         self.auto_kategori_var = tk.BooleanVar(value=False)
         self.auto_foldering_var = tk.BooleanVar(value=False)
-        self.auto_retry_var = tk.BooleanVar(value=False)
+        self.auto_retry_var = tk.BooleanVar(value=True)
         self._needs_initial_save = False
 
         self.available_models = provider_manager.get_model_choices(self.selected_provider)
@@ -344,7 +350,10 @@ Images from input folder will be processed with API, then copied to output folde
         # API Keys Section
         api_section = ctk.CTkFrame(combined_frame, corner_radius=6)
         api_section.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-        api_section.grid_columnconfigure(0, weight=1)
+        api_section.grid_columnconfigure(0, weight=1)  # api textbox / url field
+        api_section.grid_columnconfigure(1, weight=0)  # check / provider / model (left half)
+        api_section.grid_columnconfigure(2, weight=0)  # fetch / provider / model (right half)
+        api_section.grid_columnconfigure(3, weight=0)  # action buttons
         
         api_header_tooltip = """
 Configuration of application behavior:
@@ -364,61 +373,91 @@ Configuration of application behavior:
 *NB: This setting is automatically saved for the next session.
 
         """
-        api_header = self._create_header_with_help(api_section, "Settings and API Keys", api_header_tooltip, font=ctk.CTkFont(size=15, weight="bold"))
+        # Row 0: header
+        api_header = self._create_header_with_help(
+            api_section, "Settings and API Keys", api_header_tooltip,
+            font=ctk.CTkFont(size=15, weight="bold")
+        )
         api_header.grid(row=0, column=0, columnspan=4, padx=5, pady=5, sticky="w")
-        
-        # API Textbox (smaller height)
-        self.api_textbox = ctk.CTkTextbox(api_section, height=60, corner_radius=5, wrap=tk.WORD, font=self.font_normal)
-        self.api_textbox.grid(row=1, column=0, padx=7, pady=10, sticky="nsew")
+
+        # Row 1 (a) col 0: API Textbox — spans rows 1 and 2
+        self.api_textbox = ctk.CTkTextbox(
+            api_section, height=90, corner_radius=5, wrap=tk.WORD, font=self.font_normal
+        )
+        self.api_textbox.grid(row=1, column=0, rowspan=2, padx=7, pady=(10, 0), sticky="new")
         self.api_textbox.bind("<KeyRelease>", self._sync_actual_keys_from_textbox_with_autohide)
         self.api_textbox.bind("<FocusOut>", self._sync_actual_keys_from_textbox_with_autohide)
-        
-        # API Control Buttons
-        api_buttons1 = ctk.CTkFrame(api_section, fg_color="transparent")
-        api_buttons1.grid(row=1, column=1, padx=7, pady=10, sticky="nsew")
-        api_buttons2 = ctk.CTkFrame(api_section, fg_color="transparent")
-        api_buttons2.grid(row=1, column=2, padx=7, pady=10, sticky="nsew")
-        
-        self.cek_api_button = ctk.CTkButton(api_buttons1, text="Check", width=60, command=self._cek_api_keys, fg_color="#079183", height=35)
-        self.cek_api_button.pack(pady=5, fill=tk.BOTH)
-        
-        self.load_api_button = ctk.CTkButton(api_buttons1, text="Load", width=60, command=self._load_api_keys, fg_color="#079183", height=35)
-        self.load_api_button.pack(pady=5, fill=tk.BOTH)
-        
-        self.save_api_button = ctk.CTkButton(api_buttons2, text="Save", width=60, command=self._save_api_keys, fg_color="#079183", height=35)
-        self.save_api_button.pack(pady=5, fill=tk.BOTH)
-        
-        self.delete_api_button = ctk.CTkButton(api_buttons2, text="Delete", width=60, command=self._delete_selected_api_key, fg_color="#079183", height=35)
-        self.delete_api_button.pack(pady=5, fill=tk.BOTH)
-        
-        # Provider selection dropdown (takes former API-paid slot)
-        api_paid_frame = ctk.CTkFrame(api_section, fg_color="transparent")
-        api_paid_frame.grid(row=1, column=1, columnspan=2, padx=7, pady=10, sticky="sew")
 
+        # Row 1 (a) col 1: Check button
+        self.cek_api_button = ctk.CTkButton(
+            api_section, text="Check", width=70,
+            command=self._cek_api_keys, fg_color="#079183", height=35
+        )
+        self.cek_api_button.grid(row=1, column=1, padx=(7, 3), pady=10, sticky="ew")
+
+        # Row 1 (a) col 2: Fetch button
+        self.save_api_button = ctk.CTkButton(
+            api_section, text="Fetch", width=70,
+            command=self._fetch_models, fg_color="#079183", height=35
+        )
+        self.save_api_button.grid(row=1, column=2, padx=(3, 7), pady=10, sticky="ew")
+
+        # Row 2 (b) col 1+2: Provider dropdown (spans 2 columns)
         self.provider_dropdown = ctk.CTkComboBox(
-            api_paid_frame,
+            api_section,
             values=self.available_providers,
             variable=self.provider_var,
             command=self._on_provider_change,
             justify='center'
         )
-        self.provider_dropdown.pack(anchor="center", pady=10, fill=tk.X)
+        self.provider_dropdown.grid(row=2, column=1, columnspan=2, padx=7, pady=(0, 10), sticky="ewn")
         self.provider_dropdown.set(self.provider_var.get())
-        
-        # Process Control Buttons
+
+        # Row 3 (c) col 0: URL entry field — always visible, read-only for built-in providers
+        self._custom_base_url_var = tk.StringVar(value="")
+        self._base_url_entry = ctk.CTkEntry(
+            api_section,
+            textvariable=self._custom_base_url_var,
+            placeholder_text="https://your-endpoint/v1",
+            font=self.font_normal,
+        )
+        self._base_url_entry.grid(row=3, column=0, padx=7, pady=(0, 10), sticky="ewn")
+
+        # Row 3 (c) col 1+2: Model dropdown (spans 2 columns)
+        self.model_dropdown = ctk.CTkComboBox(
+            api_section,
+            values=self.available_models,
+            variable=self.model_var,
+            width=120,
+            justify='center'
+        )
+        self.model_dropdown.grid(row=3, column=1, columnspan=2, padx=7, pady=(0, 5), sticky="ewn")
+
+        # Col 3 rows 1-3: Action buttons frame
         process_buttons = ctk.CTkFrame(api_section, fg_color="transparent")
-        process_buttons.grid(row=1, column=3, padx=7, pady=10, sticky="e")
-        
-        self.start_button = ctk.CTkButton(process_buttons, text="Start Processing", command=self._start_processing, font=self.font_medium, height=35, fg_color="#079183")
+        process_buttons.grid(row=1, column=3, rowspan=3, padx=7, pady=10, sticky="nsew")
+
+        self.start_button = ctk.CTkButton(
+            process_buttons, text="Start Processing",
+            command=self._start_processing, font=self.font_medium, height=35, fg_color="#079183"
+        )
         self.start_button.pack(pady=5, fill=tk.X)
-        
-        self.stop_button = ctk.CTkButton(process_buttons, text="Stop Processing", command=self._stop_processing, font=self.font_medium, height=35, state=tk.DISABLED, fg_color=("#bf3a3a", "#8d1f1f"))
+
+        self.stop_button = ctk.CTkButton(
+            process_buttons, text="Stop Processing",
+            command=self._stop_processing, font=self.font_medium, height=35,
+            state=tk.DISABLED, fg_color=("#bf3a3a", "#8d1f1f")
+        )
         self.stop_button.pack(pady=5, fill=tk.BOTH)
-        
-        self.clear_button = ctk.CTkButton(process_buttons, text="Clear Log", command=self._clear_log, font=self.font_medium, height=35, fg_color="#079183")
+
+        self.clear_button = ctk.CTkButton(
+            process_buttons, text="Clear Log",
+            command=self._clear_log, font=self.font_medium, height=35, fg_color="#079183"
+        )
         self.clear_button.pack(pady=5, fill=tk.BOTH)
-        
-        # API Key Paid checkbox - moved here from options
+
+        # Set initial URL field state and value
+        self._update_base_url_field()
         
         
         # Settings Row
@@ -470,17 +509,13 @@ Configuration of application behavior:
         self.theme_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_themes, variable=self.theme_var, command=self._change_theme, width=120, justify='center')
         self.theme_dropdown.grid(row=1, column=1, padx=5, pady=5, sticky="ns")
         
-        ctk.CTkLabel(settings_col2, text="Models:", font=self.font_normal).grid(row=2, column=0, padx=10, pady=5, sticky="w")
-        self.model_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_models, variable=self.model_var, width=120, justify='center')
-        self.model_dropdown.grid(row=2, column=1, padx=5, pady=5, sticky="ns")
-        
-        ctk.CTkLabel(settings_col2, text="Quality:", font=self.font_normal).grid(row=3, column=0, padx=10, pady=5, sticky="wns")
+        ctk.CTkLabel(settings_col2, text="Quality:", font=self.font_normal).grid(row=2, column=0, padx=10, pady=5, sticky="wns")
         self.priority_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_priorities, variable=self.priority_var, width=120, justify='center')
-        self.priority_dropdown.grid(row=3, column=1, padx=5, pady=5, sticky="ns")
+        self.priority_dropdown.grid(row=2, column=1, padx=5, pady=5, sticky="ns")
         
-        ctk.CTkLabel(settings_col2, text="Embed:", font=self.font_normal).grid(row=4, column=0, padx=10, pady=5, sticky="wns")
+        ctk.CTkLabel(settings_col2, text="Embed:", font=self.font_normal).grid(row=3, column=0, padx=10, pady=5, sticky="wns")
         self.embedding_dropdown = ctk.CTkComboBox(settings_col2, values=self.available_embedding, variable=self.embedding_var, width=120, justify='center')
-        self.embedding_dropdown.grid(row=4, column=1, padx=5, pady=5, sticky="ns")
+        self.embedding_dropdown.grid(row=3, column=1, padx=5, pady=5, sticky="ns")
         
         # Settings Column 3 - Switches
         settings_col3 = ctk.CTkFrame(settings_row, fg_color="transparent")
@@ -499,8 +534,6 @@ Configuration of application behavior:
         self.auto_foldering_switch = ctk.CTkSwitch(settings_col3, text="Auto Foldering?", variable=self.auto_foldering_var, font=self.font_normal)
         self.auto_foldering_switch.grid(row=3, column=0, padx=10, pady=(10, 5), sticky="w")
         
-        self.auto_retry_switch = ctk.CTkSwitch(settings_col3, text="Auto Retry?", variable=self.auto_retry_var, font=self.font_normal)
-        self.auto_retry_switch.grid(row=4, column=0, padx=10, pady=(10, 5), sticky="w")
         
 
 
@@ -696,123 +729,6 @@ Configuration of application behavior:
         except Exception as e:
             self._log(f"Error saving cache: {e}", "error")
 
-    def _load_api_keys(self):
-        filepath = tk.filedialog.askopenfilename(
-            title="Select API Keys File (.txt)",
-            filetypes=(("Text files", "*.txt"), ("All files", "*.*")))
-
-        if not filepath:
-            return
-
-        try:
-            keys = read_api_keys(filepath)
-            if keys:
-                self._actual_api_keys = list(keys)
-                self._ensure_provider_entry(self.selected_provider)
-                self._persist_current_provider_keys()
-                self._update_api_textbox_with_autohide()
-                self._log(f"Successfully loaded {len(keys)} API key", "success")
-            else:
-                tk.messagebox.showwarning("Empty File",
-                    f"API keys file is empty or invalid.")
-        except Exception as e:
-            self._log(f"Error loading API keys: {e}")
-            tk.messagebox.showerror("Error", f"Failed to load API keys: {e}")
-
-    def _save_api_keys(self):
-        keys_to_save = self._get_keys_from_textbox()
-        if not keys_to_save:
-            tk.messagebox.showwarning("No APIKey",
-                "No API key to save.")
-            return
-
-        filepath = tk.filedialog.asksaveasfilename(
-            title="Save API Keys",
-            defaultextension=".txt",
-            initialfile="api_keys.txt",
-            filetypes=(("Text files", "*.txt"), ("All files", "*.*")))
-
-        if not filepath:
-            return
-
-        try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write("\n".join(keys_to_save))
-            self._log(f"API Keys ({len(keys_to_save)}) saved to file", "success")
-        except Exception as e:
-            self._log(f"Error saving API keys: {e}")
-            tk.messagebox.showerror("Error", f"Failed to save API keys: {e}")
-
-    def _delete_selected_api_key(self):
-        start_line_idx = -1
-        end_line_idx = -1
-        num_keys_to_delete = 0
-        delete_mode = ""
-
-        try:
-            start_index_str = self.api_textbox._textbox.index("sel.first")
-            end_index_str = self.api_textbox._textbox.index("sel.last")
-            start_line_idx = int(start_index_str.split('.')[0]) - 1
-            end_line_idx = int(end_index_str.split('.')[0]) - 1
-            delete_mode = "selection"
-            num_keys_to_delete = end_line_idx - start_line_idx + 1
-
-        except tk.TclError:
-            try:
-                cursor_index_str = self.api_textbox.index(tk.INSERT)
-                start_line_idx = int(cursor_index_str.split('.')[0]) - 1
-                end_line_idx = start_line_idx
-                delete_mode = "cursor"
-                num_keys_to_delete = 1
-            except ValueError:
-                self._log("Error mendapatkan posisi kursor.", "error")
-                tk.messagebox.showerror("Error", "Cannot determine target line to delete.")
-                return
-            except Exception as e:
-                 self._log(f"Unexpected error when getting cursor position: {e}", "error")
-                 tk.messagebox.showerror("Error", f"Unexpected error when checking cursor: {e}")
-                 return
-
-        except ValueError:
-            self._log("Error converting selection line index when deleting key.", "error")
-            tk.messagebox.showerror("Error", "Error converting selection line index when deleting key.")
-            return
-
-        if start_line_idx < 0 or start_line_idx >= len(self._actual_api_keys):
-            if delete_mode == "cursor" and start_line_idx == len(self._actual_api_keys):
-                 tk.messagebox.showinfo("No API Key", "No API key in this line to delete.")
-                 return
-            self._log(f"Initial line index ({start_line_idx}) is invalid.", "warning")
-            tk.messagebox.showwarning("Invalid Index", "Target line is invalid for deletion.")
-            return
-
-        if delete_mode == "selection" and (end_line_idx < 0 or end_line_idx >= len(self._actual_api_keys) or start_line_idx > end_line_idx):
-            self._log(f"Selection line index ({end_line_idx}) is invalid or inconsistent.", "warning")
-            tk.messagebox.showwarning("Invalid Selection", "Selection line is invalid for deletion.")
-            return
-
-        confirm_message = f"Are you sure you want to delete {num_keys_to_delete} selected API keys permanently?" \
-                          if delete_mode == "selection" else \
-                          f"Are you sure you want to delete API key in line {start_line_idx + 1} permanently?"
-
-        confirm_delete = tk.messagebox.askyesno("Confirm Delete", confirm_message)
-        if not confirm_delete:
-            self._log("API key deletion cancelled by user.", "info")
-            return
-
-        try:
-            del self._actual_api_keys[start_line_idx : end_line_idx + 1]
-            self._log(f"{num_keys_to_delete} API keys deleted from internal list (line {start_line_idx+1} - {end_line_idx+1}).", "info")
-            self._persist_current_provider_keys()
-            self._update_api_textbox_with_autohide()
-        except IndexError:
-            self._log("Error: Index out of range when deleting key from internal list.", "error")
-            tk.messagebox.showerror("Error", "Error: Index out of range when deleting key from internal list.")
-        except Exception as e:
-            self._log(f"Error deleting API keys from list: {e}", "error")
-            tk.messagebox.showerror("Error", f"Failed to delete API keys from list: {e}")
-
-
     def _sync_actual_keys_from_textbox_with_autohide(self, event=None):
         """Auto-hide API keys while maintaining actual keys in memory"""
         try:
@@ -897,36 +813,100 @@ Configuration of application behavior:
         self._update_api_textbox_with_autohide()
 
     def _refresh_provider_models(self, provider_name):
-        models = provider_manager.get_model_choices(provider_name)
-        self.available_models = list(models)
-        current_model = self.model_var.get() if hasattr(self, "model_var") else None
-        if current_model not in self.available_models:
-            fallback_model = provider_manager.get_default_model(provider_name)
-            if fallback_model not in self.available_models and self.available_models:
-                fallback_model = self.available_models[0]
-            current_model = fallback_model
-            if hasattr(self, "model_var"):
-                self.model_var.set(current_model)
+        models = list(self._models_by_provider.get(provider_name, []))
+        self.available_models = models
         if hasattr(self, "model_dropdown"):
             self.model_dropdown.configure(values=self.available_models)
-            if current_model:
-                self.model_dropdown.set(current_model)
+        current_model = self.model_var.get() if hasattr(self, "model_var") else ""
+        if current_model not in self.available_models and self.available_models:
+            self.model_var.set(self.available_models[0])
+            if hasattr(self, "model_dropdown"):
+                self.model_dropdown.set(self.available_models[0])
+        elif not self.available_models:
+            pass
 
-    def _toggle_api_key_visibility(self):
-        pass
+    def _fetch_models(self):
+        """Fetch available models from the selected provider via its API."""
+        provider = self.provider_var.get()
+        api_keys = self._get_keys_from_textbox()
+        if not api_keys:
+            self._log("No API key — cannot fetch models.", "warning")
+            return
 
+        self._log(f"Fetching model list for {provider}...", "info")
+        if hasattr(self, "save_api_button"):
+            self.save_api_button.configure(state="disabled")
+
+        def _do_fetch():
+            try:
+                from src.api import provider_manager
+                base_url = None
+                if provider == provider_manager.PROVIDER_CUSTOM:
+                    base_url = getattr(self, "_custom_base_url_var", tk.StringVar()).get().strip()
+                    if not base_url:
+                        self.after(0, lambda: self._log(
+                            "Custom provider requires a Base URL.", "warning"))
+                        return
+
+                models = provider_manager.fetch_models(provider, api_keys[0], base_url)
+                if models:
+                    self.after(0, lambda m=models: self._apply_fetched_models(provider, m))
+                else:
+                    self.after(0, lambda: self._log(
+                        f"No models returned for {provider}.", "warning"))
+            except Exception as e:
+                self.after(0, lambda err=e: self._log(
+                    f"Error fetching models: {err}", "error"))
+            finally:
+                self.after(0, lambda: (
+                    self.save_api_button.configure(state="normal")
+                    if hasattr(self, "save_api_button") else None
+                ))
+
+        threading.Thread(target=_do_fetch, daemon=True).start()
+
+    def _apply_fetched_models(self, provider: str, models: list):
+        """Apply fetched model list to dropdown and per-provider state."""
+        self._models_by_provider[provider] = list(models)
+        self.available_models = list(models)
+        if hasattr(self, "model_dropdown"):
+            self.model_dropdown.configure(values=self.available_models)
+        current = self.model_var.get()
+        if current not in self.available_models and self.available_models:
+            self.model_var.set(self.available_models[0])
+            if hasattr(self, "model_dropdown"):
+                self.model_dropdown.set(self.available_models[0])
+        self._log(f"Fetched {len(models)} models for {provider}.", "success")
+
+    def _update_base_url_field(self):
+        """Update URL entry field: auto-fill and disable for built-in providers,
+        enable and clear for Custom."""
+        from src.api import provider_manager
+        provider = self.provider_var.get()
+        if provider == provider_manager.PROVIDER_CUSTOM:
+            self._base_url_entry.configure(state="normal")
+        else:
+            base_url = provider_manager.PROVIDER_BASE_URLS.get(provider, "")
+            self._custom_base_url_var.set(base_url)
+            self._base_url_entry.configure(state="disabled")
 
     def _on_provider_change(self, value):
+        from src.api import provider_manager
         provider = value or provider_manager.get_default_provider()
         if provider not in self.available_providers:
             provider = self.available_providers[0]
         if provider == self.selected_provider:
             return
+
+        if hasattr(self, "model_var"):
+            self._models_by_provider.setdefault(self.selected_provider, [])
+
         self._persist_current_provider_keys()
         self.selected_provider = provider
         self.provider_var.set(provider)
         self._load_provider_keys(provider)
         self._refresh_provider_models(provider)
+        self._update_base_url_field()
         try:
             self._save_settings()
         except Exception:
@@ -1022,7 +1002,7 @@ Configuration of application behavior:
                         self.rename_files_var.set(settings.get("rename", False))
                         self.auto_kategori_var.set(settings.get("auto_kategori", True))
                         self.auto_foldering_var.set(settings.get("auto_foldering", False))
-                        self.auto_retry_var.set(settings.get("auto_retry", False))
+                        self.auto_retry_var.set(True)  # Always enabled — switch removed in Phase 2
                         # show_api_keys_var removed - API keys now auto-hide by default
                         self.console_visible_var.set(settings.get("console_visible", True))
                         self.extra_settings_var.set(settings.get("api_key_paid", False))
@@ -1032,6 +1012,14 @@ Configuration of application behavior:
                             for provider_name, keys in stored_keys_map.items():
                                 if isinstance(keys, list):
                                     self.api_keys_by_provider[provider_name] = list(keys)
+
+                        stored_models_map = settings.get("models_by_provider", {})
+                        if isinstance(stored_models_map, dict):
+                            for prov, mlist in stored_models_map.items():
+                                if isinstance(mlist, list):
+                                    self._models_by_provider[prov] = list(mlist)
+
+                        self._custom_base_url_var.set(settings.get("custom_base_url", ""))
 
                         for provider_name in self.available_providers:
                             self._ensure_provider_entry(provider_name)
@@ -1083,6 +1071,10 @@ Configuration of application behavior:
                         self.available_priorities = ["Detailed", "Balanced", "Less"]
                         self._refresh_provider_models(self.selected_provider)
 
+                        stored_base_url = settings.get("custom_base_url", "")
+                        self._custom_base_url_var.set(stored_base_url)
+                        self._update_base_url_field()
+
                 except Exception as inner_e:
                     self._log(f"Error loading configuration file: {inner_e}", "error")
             else:
@@ -1114,7 +1106,7 @@ Configuration of application behavior:
             "rename": self.rename_files_var.get(),
             "auto_kategori": self.auto_kategori_var.get(),
             "auto_foldering": self.auto_foldering_var.get(),
-            "auto_retry": self.auto_retry_var.get(),
+            "auto_retry": True,  # Hardcoded — switch removed in Phase 2
             "api_keys": current_api_keys,
             # "show_api_keys" removed - API keys now auto-hide by default
             "console_visible": self.console_visible_var.get(),
@@ -1129,6 +1121,11 @@ Configuration of application behavior:
             "api_key_paid": self.extra_settings_var.get(),
             "provider": self.provider_var.get() if hasattr(self, "provider_var") else self.selected_provider,
             "api_keys_by_provider": {name: list(keys) for name, keys in self.api_keys_by_provider.items()},
+            "models_by_provider": {
+                name: list(models)
+                for name, models in self._models_by_provider.items()
+            },
+            "custom_base_url": self._custom_base_url_var.get(),
         }
 
         try:
@@ -1371,7 +1368,6 @@ Configuration of application behavior:
         self.rename_switch.configure(state=tk.DISABLED)
         self.auto_kategori_switch.configure(state=tk.DISABLED)
         self.auto_foldering_switch.configure(state=tk.DISABLED)
-        self.auto_retry_switch.configure(state=tk.DISABLED)
         self.api_textbox.configure(state=tk.DISABLED)
         self.theme_dropdown.configure(state=tk.DISABLED)
         self.model_dropdown.configure(state=tk.DISABLED)
@@ -1383,13 +1379,13 @@ Configuration of application behavior:
         self.input_entry.configure(state=tk.DISABLED)
         self.output_entry.configure(state=tk.DISABLED)
         self.cek_api_button.configure(state=tk.DISABLED)
-        self.load_api_button.configure(state=tk.DISABLED)
         self.save_api_button.configure(state=tk.DISABLED)
-        self.delete_api_button.configure(state=tk.DISABLED)
         self.input_button.configure(state=tk.DISABLED)
         self.output_button.configure(state=tk.DISABLED)
         if hasattr(self, "provider_dropdown"):
             self.provider_dropdown.configure(state=tk.DISABLED)
+        if hasattr(self, "_base_url_entry"):
+            self._base_url_entry.configure(state=tk.DISABLED)
 
     def _run_processing(self, input_dir, output_dir, api_keys, rename_enabled, delay_seconds, num_workers, auto_kategori_enabled, auto_foldering_enabled, selected_model=None, keyword_count="49", priority="Details", bypass_api_key_limit=False):
         from src.utils.system_checks import GHOSTSCRIPT_PATH as gs_path_found
@@ -1542,7 +1538,6 @@ Configuration of application behavior:
             self.rename_switch.configure(state=tk.NORMAL)
             self.auto_kategori_switch.configure(state=tk.NORMAL)
             self.auto_foldering_switch.configure(state=tk.NORMAL)
-            self.auto_retry_switch.configure(state=tk.NORMAL)
             self.workers_entry.configure(state=tk.NORMAL)
             self.theme_dropdown.configure(state=tk.NORMAL)
             self.model_dropdown.configure(state=tk.NORMAL)
@@ -1553,13 +1548,12 @@ Configuration of application behavior:
             self.input_entry.configure(state=tk.NORMAL)
             self.output_entry.configure(state=tk.NORMAL)
             self.cek_api_button.configure(state=tk.NORMAL)
-            self.load_api_button.configure(state=tk.NORMAL)
             self.save_api_button.configure(state=tk.NORMAL)
-            self.delete_api_button.configure(state=tk.NORMAL)
             self.input_button.configure(state=tk.NORMAL)
             self.output_button.configure(state=tk.NORMAL)
             if hasattr(self, "provider_dropdown"):
                 self.provider_dropdown.configure(state=tk.NORMAL)
+            self._update_base_url_field()
         except Exception as e:
             print(f"Error when resetting UI: {e}")
             import traceback

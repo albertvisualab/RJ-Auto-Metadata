@@ -23,15 +23,19 @@
 | U1 | Terminal log severity filter | ✅ Done — `_TERMINAL_PRINT_TAGS` in `logging.py` |
 | U2 | Create `json_utils.py` | ✅ Done |
 
-## Phase 2: UI Refactor (`task/refactor-ui`)
+## Phase 2: UI Refactor (`task/refactor-ui`) — Complete
 
-- Remove Load + Delete buttons and their backend functions (`_load_api_keys`, `_save_api_keys`, `_delete_selected_api_key`)
-- Remove Auto Retry switch, hardcode `True` in `_run_processing()`
-- Replace Save button → Fetch button (dynamic model fetch via `GET /v1/models`)
-- Restructure layout: Provider and Model dropdowns moved up into API section
-- Add Custom URL field (disabled for built-in providers, enabled for Custom)
-- Implement per-provider model state (`models_by_provider`, `selected_model_by_provider`) with restore on provider switch
-- Add `"Custom"` to provider dropdown list
+| # | Item | Status |
+|---|---|---|
+| UI-1 | Remove Load + Delete buttons and dead methods | ✅ Done |
+| UI-2 | Hardcode auto_retry=True, remove Auto Retry switch | ✅ Done |
+| UI-3 | Save → Fetch button, threaded `_fetch_models()` | ✅ Done |
+| UI-4 | Add Base URL field (visible only for Custom) | ✅ Done |
+| UI-5 | Per-provider model state (`_models_by_provider`) | ✅ Done |
+| UI-6 | Add "Custom" to provider dropdown | ✅ Done |
+| UI-7 | Persist `models_by_provider` + `custom_base_url` in config | ✅ Done |
+
+Note: `fetch_models()` in `provider_manager.py` is a stub returning `[]`. Real API fetch deferred to Phase 3.
 
 ## Phase 3: Integration & Release
 
