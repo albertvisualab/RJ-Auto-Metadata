@@ -115,6 +115,22 @@ Notes:
 Notes:
 - Backend wiring (passing values to `batch_processing` / `select_prompt()`) deferred to Phase 4C Step 3.
 
+## Phase 4C Step 3: Wire Advanced Params (`task/wire-advanced-params`) — Complete
+
+| # | Item | Status |
+|---|---|---|
+| P4C3-1 | Add `min_words_override`, `max_chars_override` to `select_prompt()` | ✅ Done |
+| P4C3-2 | Add thread-local override mechanism in `prompts.py` for pipeline injection | ✅ Done |
+| P4C3-3 | Build `prompt_config` dict in `app.py` `_run_processing()` from Advanced tab vars | ✅ Done |
+| P4C3-4 | Thread `prompt_config` through `batch_process_files()` → `process_single_file()` | ✅ Done |
+| P4C3-5 | Set thread-local overrides in `process_single_file()` so `select_prompt()` picks up values | ✅ Done |
+| P4C3-6 | Add `inject_keywords` post-processing in `process_single_file()` | ✅ Done |
+| P4C3-7 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
+
+Notes:
+- Thread-local pattern avoids modifying format processors or `*_api.py` files.
+- Injected keywords affect CSV output; EXIF was already written inside format processors.
+
 ## Out of Scope
 
 - No new providers beyond Custom

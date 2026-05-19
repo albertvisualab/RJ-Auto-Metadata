@@ -147,9 +147,25 @@ Both are now resolved by the single centralized flag and the separated UI/stop-s
 - No "Custom" quality option in dropdown (not adding yet)
 - No read-only mode for limit fields when a preset quality is selected
 
+## Phase 4C Step 3 Status: Complete (Wire Advanced Params)
+
+### What Was Done
+
+- **`select_prompt()` extension**: Added `min_words_override: int = 0` and `max_chars_override: int = 0` parameters; when > 0, override preset `_PRIORITY_PARAMS` values
+- **Thread-local prompt overrides**: Added `threading.local()` based `_set_prompt_overrides()` / `_clear_prompt_overrides()` in `prompts.py`; `select_prompt()` merges thread-local values when explicit params are at defaults — avoids modifying format processors or `*_api.py` callers
+- **`prompt_config` dict**: Built in `app.py` `_run_processing()` from 7 Advanced tab StringVars (hint, custom_instruction, inject_keywords, title_min/max, desc_min/max); passed as kwarg through `batch_process_files()` → `process_single_file()` via executor.submit
+- **Thread-local set in worker**: `process_single_file()` calls `_set_prompt_overrides(prompt_config)` at entry; format processors → `provider_manager.get_metadata()` → `*_api.get_*_metadata()` → `select_prompt()` picks up overrides via thread-local
+- **Inject keywords**: After format processor returns metadata, `process_single_file()` prepends user-specified keywords to `processed_metadata["tags"]`, deduplicates, and respects `keyword_count` limit; affects CSV output
+
+### What Is NOT Done / Deferred
+
+- Injected keywords do NOT affect EXIF (already written inside format processors before return); only CSV and returned metadata benefit
+- `desc_min_words` and `desc_max_chars` are captured in `prompt_config` but not wired to `select_prompt()` (prompt builder uses single min/max for both title and desc)
+- No "Custom" quality option in dropdown
+
 ## Next Phase
 
-Phase 4C Step 3: Wire Advanced tab values through `batch_processing` to `select_prompt()`. Then final integration testing across all providers before merge `dev` → `main` and release tag.
+Final integration testing across all providers before merge `dev` → `main` and release tag.
 
 ## Key Decisions Already Made
 

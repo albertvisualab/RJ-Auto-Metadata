@@ -15,6 +15,21 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 # src/api/prompts.py
+import threading
+
+_prompt_overrides = threading.local()
+
+
+def _set_prompt_overrides(config: dict) -> None:
+    """Set thread-local prompt overrides (called from process_single_file)."""
+    _prompt_overrides.config = config or {}
+
+
+def _clear_prompt_overrides() -> None:
+    """Clear thread-local prompt overrides after processing completes."""
+    _prompt_overrides.config = {}
+
+
 _ADOBE_STOCK_CATEGORY_LIST = (
     "1.Animals, 2.Architecture, 3.Business, 4.Drinks, 5.Environment, 6.Mind, 7.Food, 8.Graphics, 9.Leisure, 10.Industry, 11.Landscapes, 12.Lifestyle, 13.People, 14.Plants, 15.Religion, 16.Science, 17.Social, 18.Sports, 19.Technology, 20.Transport, 21.Travel"
 )
@@ -137,19 +152,40 @@ def select_prompt(
     provider: str = "openai",
     user_hint: str = "",
     custom_instruction: str = "",
+    min_words_override: int = 0,
+    max_chars_override: int = 0,
 ) -> str:
     """Select and build the correct prompt for the given provider and context.
 
     This is the single public entry point for all *_api.py modules.
     The signature is backward-compatible: existing callers that do not pass
     user_hint or custom_instruction receive identical prompt text as before.
+
+    min_words_override and max_chars_override: when > 0, override the preset
+    values from _PRIORITY_PARAMS. Use these to support user-defined quality limits.
+
+    Thread-local overrides (set via _set_prompt_overrides) are applied when the
+    corresponding explicit parameter is at its default value, allowing the
+    processing pipeline to inject Advanced tab values without modifying every
+    intermediate caller.
     """
     if priority == "Less":
         priority = "Fast"
 
+    # Merge thread-local overrides for params left at their defaults
+    _ovr = getattr(_prompt_overrides, "config", {})
+    if not user_hint:
+        user_hint = _ovr.get("user_hint", "")
+    if not custom_instruction:
+        custom_instruction = _ovr.get("custom_instruction", "")
+    if min_words_override <= 0:
+        min_words_override = _ovr.get("title_min_words", 0)
+    if max_chars_override <= 0:
+        max_chars_override = _ovr.get("title_max_chars", 0)
+
     params = _PRIORITY_PARAMS.get(priority, _PRIORITY_PARAMS["Detailed"])
-    min_words = params["min_words"]
-    max_chars = params["max_chars"]
+    min_words = min_words_override if min_words_override > 0 else params["min_words"]
+    max_chars = max_chars_override if max_chars_override > 0 else params["max_chars"]
 
     provider_key = (provider or "openai").strip().lower()
 

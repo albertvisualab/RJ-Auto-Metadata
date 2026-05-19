@@ -307,7 +307,14 @@ def process_single_file(
     keyword_count="49",
     priority="Details",
     stop_event=None,
+    prompt_config=None,
 ):
+    if prompt_config is None:
+        prompt_config = {}
+
+    from src.api.prompts import _set_prompt_overrides, _clear_prompt_overrides
+    _set_prompt_overrides(prompt_config)
+
     if stop_event is None:
         import threading
         stop_event = threading.Event()
@@ -437,7 +444,22 @@ def process_single_file(
         
         if _should_stop():
             return {"status": "stopped", "input": input_path}
-        
+
+        # Inject user keywords into LLM result tags
+        inject_keywords = prompt_config.get("inject_keywords", [])
+        if inject_keywords and processed_metadata and "tags" in processed_metadata:
+            existing_tags = processed_metadata.get("tags", [])
+            if isinstance(existing_tags, list):
+                merged = list(inject_keywords)
+                for tag in existing_tags:
+                    if tag.strip().lower() not in [k.lower() for k in merged]:
+                        merged.append(tag)
+                try:
+                    limit = int(keyword_count)
+                except (ValueError, TypeError):
+                    limit = 49
+                processed_metadata["tags"] = merged[:limit]
+
         processed_statuses = ["processed_exif", "processed_no_exif", 
                               "processed_exif_failed", "processed_unknown_exif_status"]
         if status in processed_statuses:
@@ -555,7 +577,11 @@ def batch_process_files(
     keyword_count="49",
     priority="Details",
     bypass_api_key_limit=False,
+    prompt_config=None,
 ):
+    if prompt_config is None:
+        prompt_config = {}
+
     log_message(f"Starting process ({num_workers} worker, delay {delay_seconds}s)", "warning")
     
     provider_manager.reset_force_stop(provider_name)
@@ -721,7 +747,8 @@ def batch_process_files(
                             embedding_enabled,
                             keyword_count,
                             priority,
-                            stop_event
+                            stop_event,
+                            prompt_config,
                         )
                         batch_futures.append(future)
                         futures.append(future)
@@ -923,6 +950,7 @@ def batch_process_files(
                                     keyword_count,
                                     priority,
                                     stop_event,
+                                    prompt_config,
                                 )
                                 batch_retry_futures.append((future, input_path))
                                 retry_processed_files.add(input_path)

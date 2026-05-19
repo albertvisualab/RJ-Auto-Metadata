@@ -1604,6 +1604,41 @@ class MetadataApp(ctk.CTk):
                 provider_name = provider_manager.get_default_provider()
             self.selected_provider = provider_name
 
+            # Read Advanced tab values
+            user_hint = self.hint_var.get().strip() if hasattr(self, "hint_var") else ""
+            custom_instruction = self.custom_instruction_var.get().strip() \
+                if hasattr(self, "custom_instruction_var") else ""
+            inject_keywords_raw = self.inject_keywords_var.get().strip() \
+                if hasattr(self, "inject_keywords_var") else ""
+
+            def _safe_int(var_attr, fallback):
+                try:
+                    v = int(getattr(self, var_attr).get().strip())
+                    return v if v > 0 else fallback
+                except (ValueError, AttributeError):
+                    return fallback
+
+            title_min_words = _safe_int("title_min_words_var", 0)
+            title_max_chars = _safe_int("title_max_chars_var", 0)
+            desc_min_words  = _safe_int("desc_min_words_var", 0)
+            desc_max_chars  = _safe_int("desc_max_chars_var", 0)
+
+            inject_keywords_list = [
+                kw.strip().lower()
+                for kw in inject_keywords_raw.split(",")
+                if kw.strip()
+            ] if inject_keywords_raw else []
+
+            prompt_config = {
+                "user_hint":        user_hint,
+                "custom_instruction": custom_instruction,
+                "inject_keywords":  inject_keywords_list,
+                "title_min_words":  title_min_words,
+                "title_max_chars":  title_max_chars,
+                "desc_min_words":   desc_min_words,
+                "desc_max_chars":   desc_max_chars,
+            }
+
             result = batch_process_files(
                 input_dir=input_dir,
                 output_dir=output_dir,
@@ -1620,7 +1655,8 @@ class MetadataApp(ctk.CTk):
                 auto_retry_enabled=auto_retry_enabled,
                 keyword_count=keyword_count,
                 priority=priority,
-                bypass_api_key_limit=bypass_api_key_limit
+                bypass_api_key_limit=bypass_api_key_limit,
+                prompt_config=prompt_config,
             )
 
             self.processed_count = result.get("processed_count", 0)

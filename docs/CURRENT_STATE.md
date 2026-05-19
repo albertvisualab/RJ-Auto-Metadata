@@ -1,6 +1,6 @@
 # Current State — RJ Auto Metadata
 
-> Snapshot at Phase 4B.5 completion.
+> Snapshot at Phase 4C Step 3 completion.
 
 ## Version
 
@@ -14,7 +14,8 @@
 - `task/refactor-backend` — Phase 1 work branch (merged to dev)
 - `task/refactor-ui` — Phase 2 work branch (merged to dev)
 - `task/add-providers` — Phase 4A work branch (merged to dev)
-- `task/dynamic-prompt-builder` — Phase 4B work branch (current)
+- `task/dynamic-prompt-builder` — Phase 4B work branch (merged to dev)
+- `task/wire-advanced-params` — Phase 4C Step 3 work branch (current)
 
 ## Supported Providers
 
@@ -103,6 +104,14 @@
 - **Config persistence**: All 7 new vars saved/loaded in `_save_settings()`/`_load_settings()` with sensible Detailed-preset defaults
 - **No backend wiring**: Values are UI-only; passing to `batch_processing` is Phase 4C Step 3
 
+## Changes in Phase 4C Step 3 (Wire Advanced Params)
+
+- **`select_prompt()` extension**: Added `min_words_override` and `max_chars_override` parameters; when > 0, override the preset values from `_PRIORITY_PARAMS`
+- **Thread-local prompt overrides**: Added `_set_prompt_overrides()` / `_clear_prompt_overrides()` in `prompts.py` using `threading.local()`; allows `process_single_file()` to inject Advanced tab values into `select_prompt()` without modifying format processors or `*_api.py` callers
+- **`prompt_config` dict**: Built in `app.py` `_run_processing()` from 7 Advanced tab StringVars; threaded through `batch_process_files()` → `process_single_file()` via executor.submit
+- **Inject keywords post-processing**: User-specified keywords prepended to LLM result tags in `process_single_file()`, respecting `keyword_count` limit; affects CSV output
+- **Phase 4C fully complete**: All Advanced tab values now flow from UI to processing pipeline
+
 ## Remaining Technical Debt
 
 - **Vision model filtering**: Basic prefix filter applied; no vision-specific detection yet
@@ -110,7 +119,6 @@
 
 ## Pending Phases
 
-- Phase 4C Step 3: Wire Advanced tab values to batch_processing dispatch
 - Final integration testing across all providers, merge `dev` → `main`, tag new release
 
 ## Last Verified Working
