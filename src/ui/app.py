@@ -161,10 +161,11 @@ class MetadataApp(ctk.CTk):
         self.model_var = tk.StringVar(value=default_model)
         self.keyword_count_var = tk.StringVar(value="49")
         self.priority_var = tk.StringVar(value="Detailed")
+        self.priority_var.trace_add("write", lambda *_: self._on_quality_change())
         
         self.embedding_var = tk.StringVar(value="Enable")
         self.available_embedding = ["Enable", "Disable"]
-        self.available_priorities = ["Detailed", "Balanced", "Less"]
+        self.available_priorities = ["Detailed", "Balanced", "Less", "Custom"]
 
         # Advanced tab variables
         self.hint_var = tk.StringVar(value="")
@@ -174,6 +175,13 @@ class MetadataApp(ctk.CTk):
         self.title_max_chars_var = tk.StringVar(value="180")
         self.desc_min_words_var = tk.StringVar(value="6")
         self.desc_max_chars_var = tk.StringVar(value="180")
+
+        # Shadow vars: hold user-edited Custom limits separately from displayed values
+        self._custom_title_min = "6"
+        self._custom_title_max = "180"
+        self._custom_desc_min = "6"
+        self._custom_desc_max = "180"
+        self._last_quality = "Detailed"  # track previous quality to know when to save shadow
 
         self._create_ui()
         self._process_log_queue()
@@ -1230,7 +1238,7 @@ class MetadataApp(ctk.CTk):
                         self.keyword_count_var.set(str(settings.get("keyword_count", "49")))
                         self.priority_var.set(settings.get("priority", "Detailed"))
                         self.embedding_var.set(settings.get("embedding", "Enable"))
-                        self.available_priorities = ["Detailed", "Balanced", "Less"]
+                        self.available_priorities = ["Detailed", "Balanced", "Less", "Custom"]
                         self._refresh_provider_models(self.selected_provider)
 
                         # Restore model: prefer per-provider map, fall back to global
@@ -1266,6 +1274,15 @@ class MetadataApp(ctk.CTk):
                             loaded_hint = settings.get("hint", "")
                             if loaded_hint:
                                 self.hint_textbox.insert("1.0", loaded_hint)
+
+                        # Load custom shadow vars (must be done before _on_quality_change)
+                        self._custom_title_min = settings.get("custom_title_min", settings.get("title_min_words", "6"))
+                        self._custom_title_max = settings.get("custom_title_max", settings.get("title_max_chars", "180"))
+                        self._custom_desc_min = settings.get("custom_desc_min", settings.get("desc_min_words", "6"))
+                        self._custom_desc_max = settings.get("custom_desc_max", settings.get("desc_max_chars", "180"))
+                        self._last_quality = ""  # reset so _on_quality_change triggers clean
+
+                        self._on_quality_change()
 
                 except Exception as inner_e:
                     self._log(f"Error loading configuration file: {inner_e}", "error")
@@ -1331,6 +1348,11 @@ class MetadataApp(ctk.CTk):
             "title_max_chars": self.title_max_chars_var.get(),
             "desc_min_words": self.desc_min_words_var.get(),
             "desc_max_chars": self.desc_max_chars_var.get(),
+            # Custom Quality shadow values — persisted separately so they survive preset switches
+            "custom_title_min": self._custom_title_min,
+            "custom_title_max": self._custom_title_max,
+            "custom_desc_min": self._custom_desc_min,
+            "custom_desc_max": self._custom_desc_max,
         }
 
         try:
@@ -1369,6 +1391,10 @@ class MetadataApp(ctk.CTk):
 
     def _change_theme(self, selected_theme):
         try:
+            self.theme_var.set(selected_theme)
+            if hasattr(self, "theme_dropdown"):
+                self.theme_dropdown.set(selected_theme)
+            
             if selected_theme in ["dark", "light", "system"]:
                 ctk.set_appearance_mode(selected_theme)
             else:
@@ -1384,6 +1410,51 @@ class MetadataApp(ctk.CTk):
             self._save_settings()
         except Exception as e:
             self._log(f"Error changing theme: {e}", "error")
+
+    def _set_limits_state(self, state):
+        if hasattr(self, "title_min_entry"):
+            self.title_min_entry.configure(state=state)
+        if hasattr(self, "title_max_entry"):
+            self.title_max_entry.configure(state=state)
+        if hasattr(self, "desc_min_entry"):
+            self.desc_min_entry.configure(state=state)
+        if hasattr(self, "desc_max_entry"):
+            self.desc_max_entry.configure(state=state)
+
+    def _on_quality_change(self, value=None):
+        # Called via trace on priority_var — always read from the var itself
+        value = self.priority_var.get()
+        if not value:
+            return
+
+        # If leaving Custom mode, save current field values as shadow custom values
+        if getattr(self, "_last_quality", "") == "Custom" and value != "Custom":
+            self._custom_title_min = self.title_min_words_var.get()
+            self._custom_title_max = self.title_max_chars_var.get()
+            self._custom_desc_min = self.desc_min_words_var.get()
+            self._custom_desc_max = self.desc_max_chars_var.get()
+        self._last_quality = value
+
+        if value == "Custom":
+            # Restore the user's saved custom values
+            self._set_limits_state("normal")
+            self.title_min_words_var.set(self._custom_title_min)
+            self.title_max_chars_var.set(self._custom_title_max)
+            self.desc_min_words_var.set(self._custom_desc_min)
+            self.desc_max_chars_var.set(self._custom_desc_max)
+        else:
+            from src.api.prompts import _PRIORITY_PARAMS
+            preset = "Fast" if value == "Less" else value
+            params = _PRIORITY_PARAMS.get(preset, _PRIORITY_PARAMS["Detailed"])
+            min_w = str(params["min_words"])
+            max_c = str(params["max_chars"])
+            # Temporarily unlock to allow writing, then lock back
+            self._set_limits_state("normal")
+            self.title_min_words_var.set(min_w)
+            self.title_max_chars_var.set(max_c)
+            self.desc_min_words_var.set(min_w)
+            self.desc_max_chars_var.set(max_c)
+            self._set_limits_state("disabled")
 
     def _update_log_colors(self):
         theme_mode = ctk.get_appearance_mode()
@@ -1591,6 +1662,20 @@ class MetadataApp(ctk.CTk):
             self.provider_dropdown.configure(state=tk.DISABLED)
         if hasattr(self, "_base_url_entry"):
             self._base_url_entry.configure(state=tk.DISABLED)
+        if hasattr(self, "instruction_textbox"):
+            self.instruction_textbox.configure(state=tk.DISABLED)
+        if hasattr(self, "hint_textbox"):
+            self.hint_textbox.configure(state=tk.DISABLED)
+        if hasattr(self, "inject_kw_entry"):
+            self.inject_kw_entry.configure(state=tk.DISABLED)
+        if hasattr(self, "title_min_entry"):
+            self.title_min_entry.configure(state=tk.DISABLED)
+        if hasattr(self, "title_max_entry"):
+            self.title_max_entry.configure(state=tk.DISABLED)
+        if hasattr(self, "desc_min_entry"):
+            self.desc_min_entry.configure(state=tk.DISABLED)
+        if hasattr(self, "desc_max_entry"):
+            self.desc_max_entry.configure(state=tk.DISABLED)
 
     def _run_processing(self, input_dir, output_dir, api_keys, rename_enabled, delay_seconds, num_workers, auto_kategori_enabled, auto_foldering_enabled, selected_model=None, keyword_count="49", priority="Details", bypass_api_key_limit=False):
         from src.utils.system_checks import GHOSTSCRIPT_PATH as gs_path_found
@@ -1817,6 +1902,13 @@ class MetadataApp(ctk.CTk):
             self.output_button.configure(state=tk.NORMAL)
             if hasattr(self, "provider_dropdown"):
                 self.provider_dropdown.configure(state=tk.NORMAL)
+            if hasattr(self, "instruction_textbox"):
+                self.instruction_textbox.configure(state=tk.NORMAL)
+            if hasattr(self, "hint_textbox"):
+                self.hint_textbox.configure(state=tk.NORMAL)
+            if hasattr(self, "inject_kw_entry"):
+                self.inject_kw_entry.configure(state=tk.NORMAL)
+            self._on_quality_change()
             self._update_base_url_field()
         except Exception as e:
             print(f"Error when resetting UI: {e}")

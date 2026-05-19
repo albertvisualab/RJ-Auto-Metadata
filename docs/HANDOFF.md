@@ -156,12 +156,14 @@ Both are now resolved by the single centralized flag and the separated UI/stop-s
 - **`prompt_config` dict**: Built in `app.py` `_run_processing()` from 7 Advanced tab StringVars (hint, custom_instruction, inject_keywords, title_min/max, desc_min/max); passed as kwarg through `batch_process_files()` → `process_single_file()` via executor.submit
 - **Thread-local set in worker**: `process_single_file()` calls `_set_prompt_overrides(prompt_config)` at entry; format processors → `provider_manager.get_metadata()` → `*_api.get_*_metadata()` → `select_prompt()` picks up overrides via thread-local
 - **Inject keywords**: After format processor returns metadata, `process_single_file()` prepends user-specified keywords to `processed_metadata["tags"]`, deduplicates, and respects `keyword_count` limit; affects CSV output
+- **"Custom" Quality Option in Settings**: Added `"Custom"` quality option to the Settings tab Quality combobox.
+- **Dynamic Advanced Tab Field Sync and Locking**: Implemented an automated hook (`_on_quality_change()`) so that switching between presets ("Detailed", "Balanced", "Less") automatically sets the appropriate min/max limits in the Advanced tab and disables/locks the fields (read-only mode), preventing out-of-sync states. Selecting "Custom" unlocks the fields for user modification.
+- **Advanced Field Protection during processing**: Disabled Advanced tab input textboxes, inject keywords entry, and Title/Desc min/max fields during batch processing and fully restored them afterwards with proper locking based on current quality selection.
 
 ### What Is NOT Done / Deferred
 
 - Injected keywords do NOT affect EXIF (already written inside format processors before return); only CSV and returned metadata benefit
 - `desc_min_words` and `desc_max_chars` are captured in `prompt_config` but not wired to `select_prompt()` (prompt builder uses single min/max for both title and desc)
-- No "Custom" quality option in dropdown
 
 ## Next Phase
 

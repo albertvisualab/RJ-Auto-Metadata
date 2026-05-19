@@ -125,7 +125,8 @@ Notes:
 | P4C3-4 | Thread `prompt_config` through `batch_process_files()` → `process_single_file()` | ✅ Done |
 | P4C3-5 | Set thread-local overrides in `process_single_file()` so `select_prompt()` picks up values | ✅ Done |
 | P4C3-6 | Add `inject_keywords` post-processing in `process_single_file()` | ✅ Done |
-| P4C3-7 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
+| P4C3-7 | Add "Custom" option to Quality dropdown and dynamic entry locking sync | ✅ Done |
+| P4C3-8 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
 
 Notes:
 - Thread-local pattern avoids modifying format processors or `*_api.py` files.

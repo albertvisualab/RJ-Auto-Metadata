@@ -110,7 +110,10 @@
 - **Thread-local prompt overrides**: Added `_set_prompt_overrides()` / `_clear_prompt_overrides()` in `prompts.py` using `threading.local()`; allows `process_single_file()` to inject Advanced tab values into `select_prompt()` without modifying format processors or `*_api.py` callers
 - **`prompt_config` dict**: Built in `app.py` `_run_processing()` from 7 Advanced tab StringVars; threaded through `batch_process_files()` → `process_single_file()` via executor.submit
 - **Inject keywords post-processing**: User-specified keywords prepended to LLM result tags in `process_single_file()`, respecting `keyword_count` limit; affects CSV output
-- **Phase 4C fully complete**: All Advanced tab values now flow from UI to processing pipeline
+- **"Custom" Quality Dropdown Option**: Added `"Custom"` to `self.available_priorities` and the Settings tab Quality combobox.
+- **Dynamic Advanced Tab Entry Sync and Locking**: Implemented dynamic synchronization (`_on_quality_change()`). Setting the Quality dropdown to `"Detailed"`, `"Balanced"`, or `"Less"` automatically overwrites the min/max limits in the Advanced tab with preset defaults and disables the entry fields (read-only). Selecting `"Custom"` unlocks the fields for direct editing, while preserving custom inputs.
+- **Advanced Field Protection**: Updated `_disable_ui_during_processing()` and `_reset_ui_after_processing()` to lock all Advanced tab fields (textbox, entries) during processing and restore them properly afterwards.
+- **Phase 4C fully complete**: All Advanced tab values now flow from UI to processing pipeline with full preset and custom sync.
 
 ## Remaining Technical Debt
 
