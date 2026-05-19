@@ -85,6 +85,14 @@
 - **Premature UI reset fix**: `_check_thread_ended()` timeout increased from 2.5s to 30s
 - **Separated UI reset from stop flag reset**: Added `_reset_ui_buttons_only()` — resets UI without clearing stop flag; `reset_force_stop()`/`stop_event.clear()` only called when thread is confirmed dead
 
+## Changes in Phase 4C (UI Tab Settings)
+
+- **Section headers removed**: Removed "Folder Input/Output" header+tooltip, "Settings and API Keys" header+tooltip, and "Logs" label from the UI to reclaim vertical space
+- **Settings tabview**: Replaced `settings_row` CTkFrame with `CTkTabview` containing "Settings" and "Advanced" tabs
+- **Settings tab**: Existing 3×3 settings grid (Keywords/Workers/Delay, Theme/Quality/Embed, Rename/Category/Foldering) moved into "Settings" tab unchanged
+- **Advanced tab**: Blank placeholder tab added with "coming soon" label for future prompt customization
+- **Window size**: Default geometry reduced from 600×800 to 600×700
+
 ## Remaining Technical Debt
 
 - **Vision model filtering**: Basic prefix filter applied; no vision-specific detection yet

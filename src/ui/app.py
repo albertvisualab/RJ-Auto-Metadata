@@ -119,8 +119,8 @@ class MetadataApp(ctk.CTk):
         except Exception as e:
             self.iconbitmap_path = None
 
-        self.geometry("600x800")
-        self.minsize(600, 800)
+        self.geometry("600x700")
+        self.minsize(600, 700)
 
         self.input_dir = tk.StringVar()
         self.output_dir = tk.StringVar()
@@ -295,16 +295,6 @@ class MetadataApp(ctk.CTk):
         folder_frame = ctk.CTkFrame(parent, corner_radius=8)
         folder_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
         folder_frame.grid_columnconfigure(1, weight=1)
-        older_header_tooltip = """
-Select source (input) and destination (output) folders for images.
-
-• Input Folder: Folder containing\n   images to be processed
-• Output Folder: Folder where processed\n   images will be saved
-
-Images from input folder will be processed with API, then copied to output folder with new metadata.
-"""
-        folder_header = self._create_header_with_help(folder_frame, "Folder Input/Output", older_header_tooltip, font=ctk.CTkFont(size=15, weight="bold"))
-        folder_header.grid(row=0, column=0, columnspan=3, padx=10, pady=5, sticky="w")
 
         ctk.CTkLabel(folder_frame, text="Input Folder:").grid( row=1, column=0, padx=10, pady=5, sticky="w")
         self.input_entry = ctk.CTkEntry(folder_frame, textvariable=self.input_dir)
@@ -359,31 +349,6 @@ Images from input folder will be processed with API, then copied to output folde
         api_section.grid_columnconfigure(1, weight=0)  # check / provider / model (left half)
         api_section.grid_columnconfigure(2, weight=0)  # fetch / provider / model (right half)
         api_section.grid_columnconfigure(3, weight=0)  # action buttons
-        
-        api_header_tooltip = """
-Configuration of application behavior:
-
-• Keywords: Number of keywords/tags taken from API results (min 8, max 49)
-• Workers: Number of parallel threads for processing files (e.g. 1-10)
-• Delay (s): Time delay (seconds) between API requests
-• Auto Retry?: Check if you want to retry failed files
-• Auto Category?: Check if you want to auto category the files
-• Auto Foldering?: Check if you want to auto folder the files
-• Rename File?: Check if you want to rename the file
-• Embedding: Check if you want to embed the metadata to the file
-• Model: Check if you want to use the model
-• Quality: Check if you want to use the quality
-• Theme: Check if you want to use the theme
-
-*NB: This setting is automatically saved for the next session.
-
-        """
-        # Row 0: header
-        api_header = self._create_header_with_help(
-            api_section, "Settings and API Keys", api_header_tooltip,
-            font=ctk.CTkFont(size=15, weight="bold")
-        )
-        api_header.grid(row=0, column=0, columnspan=4, padx=5, pady=5, sticky="w")
 
         # Row 1 (a) col 0: API Textbox — spans rows 1 and 2
         self.api_textbox = ctk.CTkTextbox(
@@ -469,15 +434,30 @@ Configuration of application behavior:
         self._update_base_url_field()
         
         
-        # Settings Row
-        settings_row = ctk.CTkFrame(combined_frame, fg_color="transparent")
-        settings_row.grid(row=1, column=0, padx=10, pady=5, sticky="ew")
-        settings_row.grid_columnconfigure(0, weight=1)
-        settings_row.grid_columnconfigure(1, weight=1)
-        settings_row.grid_columnconfigure(2, weight=1)
+        # Settings Tabview
+        self.settings_tabview = ctk.CTkTabview(
+            combined_frame,
+            fg_color="transparent",
+            segmented_button_fg_color=("gray85", "gray25"),
+            segmented_button_selected_color="#079183",
+            segmented_button_selected_hover_color="#057a6e",
+            segmented_button_unselected_color=("gray85", "gray25"),
+            segmented_button_unselected_hover_color=("gray75", "gray35"),
+            border_width=0,
+            corner_radius=6,
+            height=130,
+        )
+        self.settings_tabview.grid(row=1, column=0, padx=5, pady=(0, 0), sticky="ew")
+        self.settings_tabview.add("Settings")
+        self.settings_tabview.add("Advanced")
+
+        settings_tab = self.settings_tabview.tab("Settings")
+        settings_tab.grid_columnconfigure(0, weight=1)
+        settings_tab.grid_columnconfigure(1, weight=1)
+        settings_tab.grid_columnconfigure(2, weight=1)
         
         # Settings Column 1 - Basic Settings
-        settings_col1 = ctk.CTkFrame(settings_row, fg_color="transparent")
+        settings_col1 = ctk.CTkFrame(settings_tab, fg_color="transparent")
         settings_col1.grid(row=0, column=0, padx=(0, 3), pady=0, sticky="nsew")
         settings_col1.grid_columnconfigure(1, weight=1)
         
@@ -506,7 +486,7 @@ Configuration of application behavior:
         self.delay_entry.grid(row=3, column=1, padx=5, pady=5, sticky="wns")
         
         # Settings Column 2 - Model & Quality
-        settings_col2 = ctk.CTkFrame(settings_row, fg_color="transparent")
+        settings_col2 = ctk.CTkFrame(settings_tab, fg_color="transparent")
         settings_col2.grid(row=0, column=1, padx=3, pady=0, sticky="nsew")
         settings_col2.grid_columnconfigure(1, weight=1)
         
@@ -530,7 +510,7 @@ Configuration of application behavior:
         CTkScrollableDropdown(self.embedding_dropdown, values=self.available_embedding, justify='center', button_color='transparent', frame_corner_radius=8, width=100, height=70)
         
         # Settings Column 3 - Switches
-        settings_col3 = ctk.CTkFrame(settings_row, fg_color="transparent")
+        settings_col3 = ctk.CTkFrame(settings_tab, fg_color="transparent")
         settings_col3.grid(row=0, column=2, padx=(3, 0), pady=0, sticky="nesw")
         settings_col3.grid_columnconfigure(0, weight=1)
         
@@ -545,21 +525,26 @@ Configuration of application behavior:
         
         self.auto_foldering_switch = ctk.CTkSwitch(settings_col3, text="Auto Foldering?", variable=self.auto_foldering_var, font=self.font_normal)
         self.auto_foldering_switch.grid(row=3, column=0, padx=10, pady=(10, 5), sticky="w")
-        
-        
 
+        # Advanced tab — placeholder for future prompt customization
+        adv_tab = self.settings_tabview.tab("Advanced")
+        adv_tab.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            adv_tab,
+            text="Advanced prompt settings — coming soon.",
+            font=self.font_normal,
+            text_color=("gray60", "gray50"),
+        ).grid(row=0, column=0, padx=20, pady=30, sticky="")
 
 
     def _create_log_frame(self, parent):
         log_frame = ctk.CTkFrame(parent, corner_radius=8)
         log_frame.grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
         log_frame.grid_columnconfigure(0, weight=1)
-        log_frame.grid_rowconfigure(1, weight=1)
+        log_frame.grid_rowconfigure(0, weight=1)
 
-        ctk.CTkLabel(log_frame, text="Logs", font=self.font_large).grid(row=0, column=0, padx=10, pady=5, sticky="w")
-
-        self.log_text = ctk.CTkTextbox(log_frame, wrap=tk.WORD, height=200, font=self.font_normal)
-        self.log_text.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="nsew")
+        self.log_text = ctk.CTkTextbox(log_frame, wrap=tk.WORD, height=150, font=self.font_normal)
+        self.log_text.grid(row=0, column=0, padx=10, pady=(0, 10), sticky="ew")
         self.log_text.configure(state=tk.DISABLED)
 
         theme_mode = ctk.get_appearance_mode()

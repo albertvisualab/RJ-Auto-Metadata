@@ -91,6 +91,18 @@ Notes:
 | P4B5-7 | Update `compression.py` and `exif_writer.py` imports | ✅ Done |
 | P4B5-8 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
 
+## Phase 4C: UI Tab Settings (`task/ui-tab-settings`) — Complete
+
+| # | Item | Status |
+|---|---|---|
+| P4C-1 | Remove "Folder Input/Output" section header + tooltip | ✅ Done |
+| P4C-2 | Remove "Settings and API Keys" section header + tooltip | ✅ Done |
+| P4C-3 | Remove "Logs" label, promote log textbox to row=0 | ✅ Done |
+| P4C-4 | Replace `settings_row` with `CTkTabview` (Settings + Advanced) | ✅ Done |
+| P4C-5 | Reparent 3 settings columns into Settings tab | ✅ Done |
+| P4C-6 | Add blank Advanced tab with placeholder label | ✅ Done |
+| P4C-7 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
+
 ## Out of Scope
 
 - No new providers beyond Custom

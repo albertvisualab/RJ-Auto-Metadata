@@ -113,9 +113,25 @@ The original stop mechanism had two bugs:
 
 Both are now resolved by the single centralized flag and the separated UI/stop-state reset.
 
+## Phase 4C Status: Complete (UI Tab Settings)
+
+### What Was Done
+
+- **Section header removal**: Removed "Folder Input/Output" header (tooltip + `_create_header_with_help` call + `.grid()`), "Settings and API Keys" header (same pattern), and "Logs" `CTkLabel` from `_create_log_frame()`
+- **Log frame adjustment**: `log_text` promoted to row=0, `grid_rowconfigure` updated accordingly
+- **Settings tabview**: Replaced `settings_row` CTkFrame with `self.settings_tabview` (`CTkTabview`) containing "Settings" and "Advanced" tabs
+- **Reparenting**: Three settings column frames (`settings_col1`, `settings_col2`, `settings_col3`) reparented from `settings_row` to `settings_tabview.tab("Settings")`
+- **Advanced tab placeholder**: Added "Advanced prompt settings — coming soon." label
+- **Window size**: Default geometry reduced from 600×800 to 600×700
+
+### Notes for Next Phase
+
+- The `_create_header_with_help()` method itself was intentionally kept — only the two calls and their tooltip strings were removed
+- The Advanced tab is ready for Phase 4C content: Image Hint field, Custom Instructions field, Specific Keywords, Custom Quality
+
 ## Next Phase
 
-Phase 4C (UI wiring for new prompt inputs and quality controls), then final integration testing across all providers before merge `dev` → `main` and release tag.
+Phase 4C content (UI wiring for new prompt inputs into the Advanced tab), then final integration testing across all providers before merge `dev` → `main` and release tag.
 
 ## Key Decisions Already Made
 
