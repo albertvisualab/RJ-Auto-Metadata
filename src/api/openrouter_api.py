@@ -30,14 +30,13 @@ import re
 from src.api.prompts import select_prompt
 from src.utils.logging import log_message
 from src.utils.json_utils import _clean_json_text
+from src.utils.stop_flag import is_stop_requested
 
 API_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 API_TIMEOUT = 60
 API_MAX_RETRIES = 2
 RETRY_DELAY_SECONDS = 8
 MAX_OUTPUT_TOKENS: Optional[int] = None
-FORCE_STOP_FLAG = False
-
 OPENROUTER_HTTP_REFERER = os.getenv("OPENROUTER_HTTP_REFERER")
 OPENROUTER_TITLE = os.getenv("OPENROUTER_APP_TITLE")
 
@@ -127,21 +126,6 @@ def select_api_key(api_keys: Iterable[str]) -> Optional[str]:
 		key = keys[_API_KEY_INDEX % len(keys)]
 		_API_KEY_INDEX = (_API_KEY_INDEX + 1) % len(keys)
 		return key
-
-
-def is_stop_requested() -> bool:
-	return FORCE_STOP_FLAG
-
-
-def set_force_stop() -> None:
-	global FORCE_STOP_FLAG
-	FORCE_STOP_FLAG = True
-	log_message("Force stop flag activated for OpenRouter provider.", "warning")
-
-
-def reset_force_stop() -> None:
-	global FORCE_STOP_FLAG
-	FORCE_STOP_FLAG = False
 
 
 def check_stop_event(stop_event, message: Optional[str] = None) -> bool:

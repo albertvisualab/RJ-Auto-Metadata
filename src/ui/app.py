@@ -1587,26 +1587,49 @@ Configuration of application behavior:
 
         if hasattr(self, '_stop_request_time') and self._stop_request_time is not None:
             elapsed_since_stop = time.monotonic() - self._stop_request_time
-            timeout_threshold = 1.5 if self.is_executable else 2.5
+            timeout_threshold = 30.0  # Allow threads enough time to see the flag
 
             if elapsed_since_stop > timeout_threshold:
-                self._log(f"Thread did not respond after {elapsed_since_stop:.1f} seconds, performing force reset UI...", "warning")
+                self._log(
+                    f"Thread did not respond after {elapsed_since_stop:.1f}s, forcing UI reset. "
+                    "Background thread may still be finishing its current file.",
+                    "warning",
+                )
                 force_reset = True
 
-                if self.is_executable and self.processing_thread and self.processing_thread.is_alive():
-                    self._log("Performing hard reset on thread worker...", "warning")
-                    from src.api.gemini_api import set_force_stop
-                    set_force_stop()
-
-        if thread_ended or force_reset:
+        if thread_ended:
+            # Thread is confirmed dead — safe to clear all stop state
             self.after(10, self._reset_ui_after_processing)
+        elif force_reset:
+            # UI timeout reached but thread still alive — reset UI buttons only,
+            # do NOT clear stop_flag or stop_event (thread must keep seeing them)
+            self.after(10, self._reset_ui_buttons_only)
         else:
             self.after(50, self._check_thread_ended)
+
+    def _reset_ui_buttons_only(self):
+        """Reset UI controls to idle state without clearing the stop flag.
+
+        Used when the UI timeout fires but the background thread is still alive.
+        The stop flag must remain active so the thread can still observe it.
+        """
+        try:
+            self._stop_request_time = None
+            self.start_button.configure(state=tk.NORMAL, text="Start Processing")
+            self.stop_button.configure(state=tk.DISABLED, text="Stop")
+            self.processing_thread = None
+            self.start_time = None
+            self.update_idletasks()
+            self._save_cache()
+            self._save_settings()
+            self.clear_button.configure(state=tk.NORMAL)
+        except Exception as e:
+            self._log(f"Error resetting UI buttons: {e}", "error")
 
     def _reset_ui_after_processing(self):
         try:
             self._stop_request_time = None
-            from src.api.gemini_api import reset_force_stop
+            from src.utils.stop_flag import reset_force_stop
             reset_force_stop()
             self.start_button.configure(state=tk.NORMAL, text="Start Processing")
             self.stop_button.configure(state=tk.DISABLED, text="Stop")
@@ -1691,7 +1714,7 @@ Configuration of application behavior:
             r"^Received stop request\.\.\.$",
             r"^Executable mode detected, using interrupt force\.\.\.$",
             r"^Stopping all active processes\.\.\.$",
-            r"^Thread did not respond after \d+\.\d+ seconds, performing force reset UI\.\.\.$",
+            r"^Thread did not respond after \d+\.\d+s, forcing UI reset\.",
             r"^Processing stopped before starting \(initial detection\)$",
             r"^Stop detected after processing batch results\.$",
             r"^Processing stopped by user \(cooldown detection\)$",
@@ -1794,7 +1817,7 @@ Configuration of application behavior:
                         "Processing is running. Are you sure you want to exit?\nProcessing will be stopped."):
                     self.stop_event.set()
 
-                    from src.api.gemini_api import set_force_stop
+                    from src.utils.stop_flag import set_force_stop
                     set_force_stop()
 
                     self.after(300, self._force_close)

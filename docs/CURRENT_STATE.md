@@ -1,6 +1,6 @@
 # Current State — RJ Auto Metadata
 
-> Snapshot at Phase 4B completion.
+> Snapshot at Phase 4B.5 completion.
 
 ## Version
 
@@ -73,6 +73,17 @@
 - **Dynamic prompt builder**: Refactored `src/api/prompts.py` from 18 hardcoded prompt strings to 2 builder functions (`_build_gemini_prompt()`, `_build_openai_prompt()`) plus `_PRIORITY_PARAMS`
 - **`select_prompt()` extension**: Added `user_hint=""` and `custom_instruction=""` parameters while keeping existing `*_api.py` call sites unchanged (backward-compatible defaults)
 - **Title safety net**: Added `_sanitize_title_length()` in `src/api/provider_manager.py` to hard-truncate overlong titles to 200 chars after keyword fill
+
+## Changes in Phase 4B.5
+
+- **Stop mechanism refactored**: Created `src/utils/stop_flag.py` as single source of truth for the global stop flag
+- **Per-module flags removed**: Removed `FORCE_STOP_FLAG` / `_force_stop`, `set_force_stop()`, `reset_force_stop()`, `is_stop_requested()` from all 7 `*_api.py` files
+- **Centralized import**: Each `*_api.py` now imports `is_stop_requested` from `stop_flag`; `check_stop_event()` kept per-module (uses `stop_event` threading.Event)
+- **provider_manager delegation**: `set_force_stop()`, `reset_force_stop()`, `is_stop_requested()` now delegate directly to `stop_flag` module
+- **Infrastructure imports**: `compression.py` and `exif_writer.py` import `is_stop_requested` from `stop_flag` instead of `gemini_api`
+- **UI stop imports**: All `app.py` imports of `set_force_stop`/`reset_force_stop` from `gemini_api` replaced with `stop_flag` imports
+- **Premature UI reset fix**: `_check_thread_ended()` timeout increased from 2.5s to 30s
+- **Separated UI reset from stop flag reset**: Added `_reset_ui_buttons_only()` — resets UI without clearing stop flag; `reset_force_stop()`/`stop_event.clear()` only called when thread is confirmed dead
 
 ## Remaining Technical Debt
 

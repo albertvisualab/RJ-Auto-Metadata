@@ -29,6 +29,7 @@ import openai
 from src.api.prompts import select_prompt
 from src.utils.logging import log_message
 from src.utils.json_utils import _clean_json_text
+from src.utils.stop_flag import is_stop_requested
 
 GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
 
@@ -36,25 +37,7 @@ API_TIMEOUT = 60
 API_MAX_RETRIES = 2
 API_RETRY_DELAY = 10
 SUCCESS_DELAY = 1.0
-FORCE_STOP_FLAG = False
-
 _ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
-
-
-def is_stop_requested():
-    global FORCE_STOP_FLAG
-    return FORCE_STOP_FLAG
-
-
-def set_force_stop():
-    global FORCE_STOP_FLAG
-    FORCE_STOP_FLAG = True
-    log_message("Force stop flag has been activated. All processes will stop immediately.", "warning")
-
-
-def reset_force_stop():
-    global FORCE_STOP_FLAG
-    FORCE_STOP_FLAG = False
 
 
 def check_stop_event(stop_event, message=None):

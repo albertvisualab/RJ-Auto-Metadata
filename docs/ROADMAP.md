@@ -78,6 +78,19 @@ Notes:
 Notes:
 - No UI changes in Phase 4B; new prompt inputs are backend-ready and will be wired in Phase 4C.
 
+## Phase 4B.5: Stop Mechanism Fix (`task/fix-stop-mechanism`) — Complete
+
+| # | Item | Status |
+|---|---|---|
+| P4B5-1 | Create `src/utils/stop_flag.py` as single global stop flag | ✅ Done |
+| P4B5-2 | Remove per-module stop flags from all 7 `*_api.py` files | ✅ Done |
+| P4B5-3 | Update `provider_manager.py` to delegate to `stop_flag` | ✅ Done |
+| P4B5-4 | Fix premature UI reset timeout (2.5s → 30s) in `_check_thread_ended()` | ✅ Done |
+| P4B5-5 | Separate UI reset from stop flag reset (`_reset_ui_buttons_only()`) | ✅ Done |
+| P4B5-6 | Replace all `gemini_api` stop imports in `app.py` with `stop_flag` | ✅ Done |
+| P4B5-7 | Update `compression.py` and `exif_writer.py` imports | ✅ Done |
+| P4B5-8 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
+
 ## Out of Scope
 
 - No new providers beyond Custom

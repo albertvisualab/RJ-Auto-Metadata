@@ -23,7 +23,8 @@ import re
 import platform
 from sqlalchemy import text
 from src.utils.logging import log_message
-from src.api.gemini_api import check_stop_event, is_stop_requested
+from src.utils.stop_flag import is_stop_requested
+from src.api.gemini_api import check_stop_event
 
 def check_exiftool_exists():
     try:

@@ -92,6 +92,27 @@
 - UI launch/routing confirmed against provider docs and configured base URLs
 - Real API-key execution for Mistral and Blackbox not validated due unavailable key credits in this session
 
+## Phase 4B.5 Status: Complete
+
+### What Was Done
+
+- **Stop flag centralization**: Created `src/utils/stop_flag.py` as single source of truth for global stop flag (`_FORCE_STOP` bool with `is_stop_requested()`, `set_force_stop()`, `reset_force_stop()`)
+- **Per-module flag removal**: Removed `FORCE_STOP_FLAG`/`_force_stop`, `set_force_stop()`, `reset_force_stop()`, `is_stop_requested()` from all 7 `*_api.py` files (gemini, openai, openrouter, groq, koboillm, mistral, blackbox)
+- **Import update**: Each `*_api.py` now imports `is_stop_requested` from `stop_flag`; `check_stop_event()` kept in each module (uses threading.Event)
+- **provider_manager simplification**: `set_force_stop()`, `reset_force_stop()`, `is_stop_requested()` now delegate to `stop_flag` directly instead of iterating all provider modules
+- **Infrastructure import fix**: `compression.py` and `exif_writer.py` import `is_stop_requested` from `stop_flag` instead of `gemini_api`
+- **app.py stop import fix**: All `gemini_api` stop imports replaced with `stop_flag` imports
+- **Premature UI reset fix**: `_check_thread_ended()` timeout increased from 2.5s to 30s
+- **UI/stop separation**: Added `_reset_ui_buttons_only()` — resets UI controls without clearing stop flag; `reset_force_stop()`/`stop_event.clear()` only happen when thread is confirmed dead
+
+### Bug Fixed
+
+The original stop mechanism had two bugs:
+1. Each provider had its own independent stop flag — stopping one didn't affect others
+2. `_check_thread_ended()` had a 2.5s timeout that reset the stop flag while threads were still alive, causing them to continue after the user clicked Stop
+
+Both are now resolved by the single centralized flag and the separated UI/stop-state reset.
+
 ## Next Phase
 
 Phase 4C (UI wiring for new prompt inputs and quality controls), then final integration testing across all providers before merge `dev` → `main` and release tag.

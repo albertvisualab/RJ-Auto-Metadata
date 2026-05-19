@@ -18,39 +18,18 @@
 """Mistral AI provider — OpenAI-compatible endpoint."""
 
 import base64
-import threading
 
 from openai import OpenAI
 
 from src.api.prompts import select_prompt
 from src.utils.json_utils import _clean_json_text
 from src.utils.logging import log_message
+from src.utils.stop_flag import is_stop_requested
 
 BASE_URL = "https://api.mistral.ai/v1"
 
-_force_stop = False
-_stop_lock = threading.Lock()
-
-
-def set_force_stop():
-    global _force_stop
-    with _stop_lock:
-        _force_stop = True
-
-
-def reset_force_stop():
-    global _force_stop
-    with _stop_lock:
-        _force_stop = False
-
-
-def is_stop_requested():
-    with _stop_lock:
-        return _force_stop
-
-
 def check_stop_event(stop_event, message=None):
-    if _force_stop:
+    if is_stop_requested():
         if message:
             log_message(message)
         return True

@@ -25,6 +25,7 @@ from src.api import (
     mistral_api, blackbox_api,
 )
 from src.utils.logging import log_message
+from src.utils import stop_flag as _stop_flag
 
 PROVIDER_GEMINI = "Gemini"
 PROVIDER_OPENAI = "OpenAI"
@@ -397,36 +398,20 @@ def check_api_keys_status(provider: str, api_keys: Iterable[str], model: Optiona
 
 
 def set_force_stop(provider: Optional[str] = None) -> None:
-    if provider is None:
-        for provider_name in list_providers():
-            module, _ = get_provider_module(provider_name)
-            if module is not None and hasattr(module, "set_force_stop"):
-                module.set_force_stop()
-        return
-    module, _ = get_provider_module(provider)
-    if module is not None and hasattr(module, "set_force_stop"):
-        module.set_force_stop()
+    """Activate the global stop flag. The provider argument is ignored (kept for
+    backward compatibility with call sites that pass a provider name)."""
+    _stop_flag.set_force_stop()
+    log_message("Force stop flag has been activated. All processes will stop immediately.", "warning")
 
 
 def reset_force_stop(provider: Optional[str] = None) -> None:
-    if provider is None:
-        for provider_name in list_providers():
-            module, _ = get_provider_module(provider_name)
-            if module is not None and hasattr(module, "reset_force_stop"):
-                module.reset_force_stop()
-        return
-    module, _ = get_provider_module(provider)
-    if module is not None and hasattr(module, "reset_force_stop"):
-        module.reset_force_stop()
+    """Clear the global stop flag. The provider argument is ignored."""
+    _stop_flag.reset_force_stop()
 
 
 def is_stop_requested(provider: Optional[str] = None) -> bool:
-    if provider is None:
-        return any(is_stop_requested(name) for name in list_providers())
-    module, _ = get_provider_module(provider)
-    if module is not None and hasattr(module, "is_stop_requested"):
-        return module.is_stop_requested()
-    return False
+    """Return True if a stop has been requested. The provider argument is ignored."""
+    return _stop_flag.is_stop_requested()
 
 
 def check_stop_event(provider: str, stop_event, message: Optional[str] = None) -> bool:
