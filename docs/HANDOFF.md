@@ -129,9 +129,27 @@ Both are now resolved by the single centralized flag and the separated UI/stop-s
 - The `_create_header_with_help()` method itself was intentionally kept — only the two calls and their tooltip strings were removed
 - The Advanced tab is ready for Phase 4C content: Image Hint field, Custom Instructions field, Specific Keywords, Custom Quality
 
+## Phase 4C Step 2 Status: Complete (Advanced Tab Content)
+
+### What Was Done
+
+- **Advanced tab layout**: Replaced "coming soon" placeholder with Option B 3-column layout in `_create_combined_api_settings_frame()`
+  - Col 0: `instruction_textbox` (CTkTextbox, rowspan=2, syncs to `custom_instruction_var` via KeyRelease/FocusOut)
+  - Col 1: `hint_entry` + `inject_kw_entry` in `adv_col1` sub-frame (label+entry pattern matching Settings tab)
+  - Col 2: Title min/max + Desc min/max entries in `adv_col2` sub-frame with compact `title_limit_frame`/`desc_limit_frame`
+- **New StringVars**: 7 vars added in `__init__`: `hint_var`, `custom_instruction_var`, `inject_keywords_var`, `title_min_words_var`, `title_max_chars_var`, `desc_min_words_var`, `desc_max_chars_var`
+- **Config persistence**: All 7 keys added to `_save_settings()` dict and `_load_settings()` with Detailed-preset defaults (min_words=6, max_chars=180)
+- **Textbox restore**: `_load_settings()` populates `instruction_textbox` from saved `custom_instruction` value
+
+### What Is NOT Done / Deferred to Phase 4C Step 3
+
+- Backend wiring: passing `hint_var`, `custom_instruction_var`, `inject_keywords_var`, and limit vars to `batch_processing` / `provider_manager.get_metadata()` → `select_prompt()`
+- No "Custom" quality option in dropdown (not adding yet)
+- No read-only mode for limit fields when a preset quality is selected
+
 ## Next Phase
 
-Phase 4C content (UI wiring for new prompt inputs into the Advanced tab), then final integration testing across all providers before merge `dev` → `main` and release tag.
+Phase 4C Step 3: Wire Advanced tab values through `batch_processing` to `select_prompt()`. Then final integration testing across all providers before merge `dev` → `main` and release tag.
 
 ## Key Decisions Already Made
 

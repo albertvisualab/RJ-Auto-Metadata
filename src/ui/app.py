@@ -166,6 +166,15 @@ class MetadataApp(ctk.CTk):
         self.available_embedding = ["Enable", "Disable"]
         self.available_priorities = ["Detailed", "Balanced", "Less"]
 
+        # Advanced tab variables
+        self.hint_var = tk.StringVar(value="")
+        self.custom_instruction_var = tk.StringVar(value="")
+        self.inject_keywords_var = tk.StringVar(value="")
+        self.title_min_words_var = tk.StringVar(value="6")
+        self.title_max_chars_var = tk.StringVar(value="180")
+        self.desc_min_words_var = tk.StringVar(value="6")
+        self.desc_max_chars_var = tk.StringVar(value="180")
+
         self._create_ui()
         self._process_log_queue()
         self._load_settings()
@@ -526,15 +535,115 @@ class MetadataApp(ctk.CTk):
         self.auto_foldering_switch = ctk.CTkSwitch(settings_col3, text="Auto Foldering?", variable=self.auto_foldering_var, font=self.font_normal)
         self.auto_foldering_switch.grid(row=3, column=0, padx=10, pady=(10, 5), sticky="w")
 
-        # Advanced tab — placeholder for future prompt customization
+        # Advanced tab — prompt customization controls (3 sub-frames in 1 row)
         adv_tab = self.settings_tabview.tab("Advanced")
         adv_tab.grid_columnconfigure(0, weight=1)
+        adv_tab.grid_columnconfigure(1, weight=0)
+        adv_tab.grid_columnconfigure(2, weight=0)
+        adv_tab.grid_rowconfigure(0, weight=1)
+
+        # Col 0 — Instructions label + textarea
+        adv_col0 = ctk.CTkFrame(adv_tab, fg_color="transparent")
+        adv_col0.grid(row=0, column=0, padx=(0, 3), pady=0, sticky="nsew")
+        adv_col0.grid_columnconfigure(0, weight=1)
+        adv_col0.grid_rowconfigure(1, weight=1)
+
         ctk.CTkLabel(
-            adv_tab,
-            text="Advanced prompt settings — coming soon.",
-            font=self.font_normal,
-            text_color=("gray60", "gray50"),
-        ).grid(row=0, column=0, padx=20, pady=30, sticky="")
+            adv_col0, text="Instructions:", font=self.font_normal, anchor="w"
+        ).grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
+
+        self.instruction_textbox = ctk.CTkTextbox(
+            adv_col0, font=self.font_normal, wrap="word",
+            height=72, corner_radius=5,
+        )
+        self.instruction_textbox.grid(
+            row=1, column=0, padx=10, pady=(2, 5), sticky="nsew"
+        )
+
+        def _on_instruction_change(event=None):
+            self.custom_instruction_var.set(
+                self.instruction_textbox.get("1.0", "end-1c")
+            )
+        self.instruction_textbox.bind("<KeyRelease>", _on_instruction_change)
+        self.instruction_textbox.bind("<FocusOut>", _on_instruction_change)
+
+        # Col 1 — Hint label + textarea (mirrors Instructions)
+        adv_col1 = ctk.CTkFrame(adv_tab, fg_color="transparent")
+        adv_col1.grid(row=0, column=1, padx=3, pady=0, sticky="nsew")
+        adv_col1.grid_columnconfigure(0, weight=1)
+        adv_col1.grid_rowconfigure(1, weight=1)
+
+        ctk.CTkLabel(
+            adv_col1, text="Hint:", font=self.font_normal, anchor="w"
+        ).grid(row=0, column=0, padx=10, pady=(5, 0), sticky="w")
+
+        self.hint_textbox = ctk.CTkTextbox(
+            adv_col1, font=self.font_normal, wrap="word",
+            height=72, width=120, corner_radius=5,
+        )
+        self.hint_textbox.grid(
+            row=1, column=0, padx=10, pady=(2, 5), sticky="nsew"
+        )
+
+        def _on_hint_change(event=None):
+            self.hint_var.set(self.hint_textbox.get("1.0", "end-1c"))
+        self.hint_textbox.bind("<KeyRelease>", _on_hint_change)
+        self.hint_textbox.bind("<FocusOut>", _on_hint_change)
+
+        # Col 2 — Title/Desc limits + Inject KW
+        adv_col2 = ctk.CTkFrame(adv_tab, fg_color="transparent")
+        adv_col2.grid(row=0, column=2, padx=(3, 0), pady=0, sticky="nsew")
+        adv_col2.grid_columnconfigure(3, weight=1)
+
+        ctk.CTkLabel(adv_col2, text="Title:", font=self.font_normal).grid(
+            row=0, column=0, padx=(10, 2), pady=5, sticky="w"
+        )
+        ctk.CTkLabel(adv_col2, text="\u25bc", font=self.font_small).grid(
+            row=0, column=1, padx=(2, 0), pady=5, sticky="e"
+        )
+        self.title_min_entry = ctk.CTkEntry(
+            adv_col2, textvariable=self.title_min_words_var,
+            width=40, justify="center", font=self.font_normal,
+        )
+        self.title_min_entry.grid(row=0, column=2, padx=2, pady=5, sticky="w")
+        ctk.CTkLabel(adv_col2, text="\u25b2", font=self.font_small).grid(
+            row=0, column=3, padx=(2, 0), pady=5, sticky="e"
+        )
+        self.title_max_entry = ctk.CTkEntry(
+            adv_col2, textvariable=self.title_max_chars_var,
+            width=40, justify="center", font=self.font_normal,
+        )
+        self.title_max_entry.grid(row=0, column=4, padx=(2, 5), pady=5, sticky="w")
+
+        ctk.CTkLabel(adv_col2, text="Desc:", font=self.font_normal).grid(
+            row=1, column=0, padx=(10, 2), pady=5, sticky="w"
+        )
+        ctk.CTkLabel(adv_col2, text="\u25bc", font=self.font_small).grid(
+            row=1, column=1, padx=(2, 0), pady=5, sticky="e"
+        )
+        self.desc_min_entry = ctk.CTkEntry(
+            adv_col2, textvariable=self.desc_min_words_var,
+            width=40, justify="center", font=self.font_normal,
+        )
+        self.desc_min_entry.grid(row=1, column=2, padx=2, pady=5, sticky="w")
+        ctk.CTkLabel(adv_col2, text="\u25b2", font=self.font_small).grid(
+            row=1, column=3, padx=(2, 0), pady=5, sticky="e"
+        )
+        self.desc_max_entry = ctk.CTkEntry(
+            adv_col2, textvariable=self.desc_max_chars_var,
+            width=40, justify="center", font=self.font_normal,
+        )
+        self.desc_max_entry.grid(row=1, column=4, padx=(2, 5), pady=5, sticky="w")
+
+        ctk.CTkLabel(adv_col2, text="Inject KW:", font=self.font_normal).grid(
+            row=2, column=0, padx=(10, 2), pady=5, sticky="w"
+        )
+        self.inject_kw_entry = ctk.CTkEntry(
+            adv_col2, textvariable=self.inject_keywords_var, width=100,
+            justify="left", font=self.font_normal,
+            placeholder_text="e.g. nature,forest",
+        )
+        self.inject_kw_entry.grid(row=2, column=1, columnspan=4, padx=(2, 5), pady=5, sticky="ew")
 
 
     def _create_log_frame(self, parent):
@@ -1137,6 +1246,27 @@ class MetadataApp(ctk.CTk):
                         self._custom_base_url_var.set(stored_base_url)
                         self._update_base_url_field()
 
+                        # Advanced tab values
+                        self.hint_var.set(settings.get("hint", ""))
+                        self.custom_instruction_var.set(settings.get("custom_instruction", ""))
+                        self.inject_keywords_var.set(settings.get("inject_keywords", ""))
+                        self.title_min_words_var.set(settings.get("title_min_words", "6"))
+                        self.title_max_chars_var.set(settings.get("title_max_chars", "180"))
+                        self.desc_min_words_var.set(settings.get("desc_min_words", "6"))
+                        self.desc_max_chars_var.set(settings.get("desc_max_chars", "180"))
+
+                        if hasattr(self, "instruction_textbox"):
+                            self.instruction_textbox.delete("1.0", "end")
+                            loaded_instr = settings.get("custom_instruction", "")
+                            if loaded_instr:
+                                self.instruction_textbox.insert("1.0", loaded_instr)
+
+                        if hasattr(self, "hint_textbox"):
+                            self.hint_textbox.delete("1.0", "end")
+                            loaded_hint = settings.get("hint", "")
+                            if loaded_hint:
+                                self.hint_textbox.insert("1.0", loaded_hint)
+
                 except Exception as inner_e:
                     self._log(f"Error loading configuration file: {inner_e}", "error")
             else:
@@ -1194,6 +1324,13 @@ class MetadataApp(ctk.CTk):
             },
             "selected_model_by_provider": dict(self._selected_model_by_provider),
             "custom_base_url": self._custom_base_url_var.get(),
+            "hint": self.hint_var.get(),
+            "custom_instruction": self.custom_instruction_var.get(),
+            "inject_keywords": self.inject_keywords_var.get(),
+            "title_min_words": self.title_min_words_var.get(),
+            "title_max_chars": self.title_max_chars_var.get(),
+            "desc_min_words": self.desc_min_words_var.get(),
+            "desc_max_chars": self.desc_max_chars_var.get(),
         }
 
         try:

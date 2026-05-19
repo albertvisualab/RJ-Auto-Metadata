@@ -93,6 +93,16 @@
 - **Advanced tab**: Blank placeholder tab added with "coming soon" label for future prompt customization
 - **Window size**: Default geometry reduced from 600×800 to 600×700
 
+## Changes in Phase 4C Step 2 (Advanced Tab Content)
+
+- **Advanced tab layout**: Replaced placeholder with Option B 3-column layout:
+  - Col 0: Instructions textarea (CTkTextbox, full height via rowspan, stretches horizontally)
+  - Col 1: Hint entry + Inject Keywords entry (sub-frame matching Settings tab style)
+  - Col 2: Title min/max + Desc min/max limit entries (compact sub-frames)
+- **New StringVars**: Added 7 variables — `hint_var`, `custom_instruction_var`, `inject_keywords_var`, `title_min_words_var`, `title_max_chars_var`, `desc_min_words_var`, `desc_max_chars_var`
+- **Config persistence**: All 7 new vars saved/loaded in `_save_settings()`/`_load_settings()` with sensible Detailed-preset defaults
+- **No backend wiring**: Values are UI-only; passing to `batch_processing` is Phase 4C Step 3
+
 ## Remaining Technical Debt
 
 - **Vision model filtering**: Basic prefix filter applied; no vision-specific detection yet
@@ -100,6 +110,7 @@
 
 ## Pending Phases
 
+- Phase 4C Step 3: Wire Advanced tab values to batch_processing dispatch
 - Final integration testing across all providers, merge `dev` → `main`, tag new release
 
 ## Last Verified Working

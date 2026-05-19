@@ -103,6 +103,18 @@ Notes:
 | P4C-6 | Add blank Advanced tab with placeholder label | ✅ Done |
 | P4C-7 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
 
+## Phase 4C Step 2: Advanced Tab Content (`task/ui-advanced-tab`) — Complete
+
+| # | Item | Status |
+|---|---|---|
+| P4C2-1 | Add 7 Advanced tab StringVars in `__init__` | ✅ Done |
+| P4C2-2 | Replace placeholder with Option B 3-column layout | ✅ Done |
+| P4C2-3 | Config persistence for all 7 new keys | ✅ Done |
+| P4C2-4 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
+
+Notes:
+- Backend wiring (passing values to `batch_processing` / `select_prompt()`) deferred to Phase 4C Step 3.
+
 ## Out of Scope
 
 - No new providers beyond Custom
