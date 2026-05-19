@@ -65,6 +65,19 @@ Notes:
 - Mistral and Blackbox use OpenAI-compatible routing via configured base URLs.
 - Live key/credit validation is deferred to provider-backed testing.
 
+## Phase 4B: Dynamic Prompt Builder (`task/dynamic-prompt-builder`) — Complete
+
+| # | Item | Status |
+|---|---|---|
+| P4B-1 | Replace 18 hardcoded prompt strings with dynamic builders in `src/api/prompts.py` | ✅ Done |
+| P4B-2 | Add `_PRIORITY_PARAMS` map (`Detailed`/`Balanced`/`Fast`) | ✅ Done |
+| P4B-3 | Extend `select_prompt()` with `user_hint` + `custom_instruction` defaults | ✅ Done |
+| P4B-4 | Add title hard-truncation safety net in `src/api/provider_manager.py` | ✅ Done |
+| P4B-5 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
+
+Notes:
+- No UI changes in Phase 4B; new prompt inputs are backend-ready and will be wired in Phase 4C.
+
 ## Out of Scope
 
 - No new providers beyond Custom

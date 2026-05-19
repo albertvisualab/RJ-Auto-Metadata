@@ -82,6 +82,27 @@ _PROVIDERS = {
     },
 }
 
+_TITLE_HARD_MAX = 200  # Adobe Stock absolute maximum for title
+
+
+def _sanitize_title_length(metadata: dict) -> dict:
+    """Hard-truncate title to _TITLE_HARD_MAX chars if LLM exceeded the limit.
+
+    Truncates at the last word boundary to avoid cutting mid-word.
+    Only triggers when the LLM ignores the max_chars instruction.
+    """
+    title = metadata.get("title", "")
+    if isinstance(title, str) and len(title) > _TITLE_HARD_MAX:
+        truncated = title[:_TITLE_HARD_MAX].rsplit(" ", 1)[0]
+        metadata["title"] = truncated
+        from src.utils.logging import log_message
+        log_message(
+            f"Warning: Title truncated from {len(title)} to {len(truncated)} chars "
+            f"(hard max {_TITLE_HARD_MAX})",
+            "warning",
+        )
+    return metadata
+
 
 def list_providers() -> List[str]:
     return list(_PROVIDERS.keys())
@@ -255,7 +276,7 @@ def get_metadata(
             is_vector_conversion=is_vector_conversion,
         )
         if isinstance(result, dict) and "error" not in result:
-            return _fill_keywords_if_short(result, keyword_count)
+            return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
         return result
 
     if provider_key == PROVIDER_GEMINI:
@@ -273,7 +294,7 @@ def get_metadata(
             is_vector_conversion=is_vector_conversion,
         )
         if isinstance(result, dict) and "error" not in result:
-            return _fill_keywords_if_short(result, keyword_count)
+            return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
         return result
     if provider_key == PROVIDER_OPENROUTER:
         result = module.get_openrouter_metadata(
@@ -288,7 +309,7 @@ def get_metadata(
             is_vector_conversion=is_vector_conversion,
         )
         if isinstance(result, dict) and "error" not in result:
-            return _fill_keywords_if_short(result, keyword_count)
+            return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
         return result
     if provider_key == PROVIDER_GROQ:
         result = module.get_groq_metadata(
@@ -303,7 +324,7 @@ def get_metadata(
             is_vector_conversion=is_vector_conversion,
         )
         if isinstance(result, dict) and "error" not in result:
-            return _fill_keywords_if_short(result, keyword_count)
+            return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
         return result
     if provider_key == PROVIDER_KOBOILLM:
         result = module.get_koboillm_metadata(
@@ -318,7 +339,7 @@ def get_metadata(
             is_vector_conversion=is_vector_conversion,
         )
         if isinstance(result, dict) and "error" not in result:
-            return _fill_keywords_if_short(result, keyword_count)
+            return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
         return result
     if provider_key == PROVIDER_MISTRAL:
         result = module.get_mistral_metadata(
@@ -333,7 +354,7 @@ def get_metadata(
             is_vector_conversion=is_vector_conversion,
         )
         if isinstance(result, dict) and "error" not in result:
-            return _fill_keywords_if_short(result, keyword_count)
+            return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
         return result
 
     if provider_key == PROVIDER_BLACKBOX:
@@ -349,7 +370,7 @@ def get_metadata(
             is_vector_conversion=is_vector_conversion,
         )
         if isinstance(result, dict) and "error" not in result:
-            return _fill_keywords_if_short(result, keyword_count)
+            return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
         return result
 
     result = module.get_openai_metadata(
@@ -364,7 +385,7 @@ def get_metadata(
         is_vector_conversion=is_vector_conversion,
     )
     if isinstance(result, dict) and "error" not in result:
-        return _fill_keywords_if_short(result, keyword_count)
+        return _sanitize_title_length(_fill_keywords_if_short(result, keyword_count))
     return result
 
 

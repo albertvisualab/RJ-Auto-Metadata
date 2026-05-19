@@ -1,6 +1,6 @@
 # Current State — RJ Auto Metadata
 
-> Snapshot at Phase 4A completion.
+> Snapshot at Phase 4B completion.
 
 ## Version
 
@@ -9,11 +9,12 @@
 ## Branch Structure
 
 - `main` — stable release baseline (v3.11.3)
-- `dev` — integration branch (Phase 3 complete at `95fe354`)
+- `dev` — integration branch (Phase 4A complete at `115b3fd`)
 - `task/docs-governance` — Phase 0 work branch (merged to dev)
 - `task/refactor-backend` — Phase 1 work branch (merged to dev)
 - `task/refactor-ui` — Phase 2 work branch (merged to dev)
-- `task/add-providers` — Phase 4A work branch (current)
+- `task/add-providers` — Phase 4A work branch (merged to dev)
+- `task/dynamic-prompt-builder` — Phase 4B work branch (current)
 
 ## Supported Providers
 
@@ -66,6 +67,12 @@
 - **Mistral provider**: Added `src/api/mistral_api.py` using OpenAI-compatible endpoint `https://api.mistral.ai/v1`
 - **Blackbox provider**: Added `src/api/blackbox_api.py` using OpenAI-compatible endpoint `https://api.blackbox.ai`
 - **Provider registration**: Added Mistral + Blackbox to `provider_manager.py` constants, `PROVIDER_BASE_URLS`, `_PROVIDERS`, and `get_metadata()` dispatch
+
+## Changes in Phase 4B
+
+- **Dynamic prompt builder**: Refactored `src/api/prompts.py` from 18 hardcoded prompt strings to 2 builder functions (`_build_gemini_prompt()`, `_build_openai_prompt()`) plus `_PRIORITY_PARAMS`
+- **`select_prompt()` extension**: Added `user_hint=""` and `custom_instruction=""` parameters while keeping existing `*_api.py` call sites unchanged (backward-compatible defaults)
+- **Title safety net**: Added `_sanitize_title_length()` in `src/api/provider_manager.py` to hard-truncate overlong titles to 200 chars after keyword fill
 
 ## Remaining Technical Debt
 

@@ -73,6 +73,19 @@
 - **Provider add**: Created `src/api/blackbox_api.py` (OpenAI-compatible, base URL `https://api.blackbox.ai`, public entry `get_blackbox_metadata`)
 - **Provider registry**: Updated `src/api/provider_manager.py` with `PROVIDER_MISTRAL` and `PROVIDER_BLACKBOX` constants, added both to `PROVIDER_BASE_URLS`, `_PROVIDERS`, and `get_metadata()` dispatch routing
 
+## Phase 4B Status: Complete
+
+### What Was Done
+
+- **Prompt refactor**: Replaced 18 hardcoded prompt string variants in `src/api/prompts.py` with dynamic builders (`_build_gemini_prompt()`, rewritten `_build_openai_prompt()`) and `_PRIORITY_PARAMS`
+- **Prompt entry point update**: Extended `select_prompt()` signature with `user_hint=""` and `custom_instruction=""` while preserving existing `*_api.py` call compatibility
+- **Provider safety guard**: Added `_sanitize_title_length()` in `src/api/provider_manager.py` and chained it after `_fill_keywords_if_short()` for all provider return paths
+
+### Notes for Next Phase (4C)
+
+- No UI changes in Phase 4B; `user_hint` and `custom_instruction` are wired at API prompt builder level but currently always empty (`""`) from existing UI flows
+- Groundwork is ready for Phase 4C UI additions: Image Hint field, Custom Instructions field, Specific Keywords support, and Custom Quality settings
+
 ### Validation Notes
 
 - Import and provider-list checks pass (`provider_manager.list_providers()` includes Mistral and Blackbox)
@@ -81,7 +94,7 @@
 
 ## Next Phase
 
-Phase 4B / final integration testing across all providers, then merge `dev` → `main` and tag next release.
+Phase 4C (UI wiring for new prompt inputs and quality controls), then final integration testing across all providers before merge `dev` → `main` and release tag.
 
 ## Key Decisions Already Made
 
