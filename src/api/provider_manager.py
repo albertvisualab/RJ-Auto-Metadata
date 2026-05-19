@@ -20,7 +20,10 @@ from __future__ import annotations
 from typing import Iterable, List, Optional
 import re
 
-from src.api import gemini_api, openai_api, openrouter_api, groq_api, koboillm_api
+from src.api import (
+    gemini_api, openai_api, openrouter_api, groq_api, koboillm_api,
+    mistral_api, blackbox_api,
+)
 from src.utils.logging import log_message
 
 PROVIDER_GEMINI = "Gemini"
@@ -29,6 +32,8 @@ PROVIDER_OPENROUTER = "OpenRouter"
 PROVIDER_GROQ = "Groq"
 PROVIDER_KOBOILLM = "KoboiLLM"
 PROVIDER_CUSTOM = "Custom"
+PROVIDER_MISTRAL = "Mistral"
+PROVIDER_BLACKBOX = "Blackbox"
 _DEFAULT_PROVIDER = PROVIDER_GEMINI
 
 PROVIDER_BASE_URLS = {
@@ -37,6 +42,8 @@ PROVIDER_BASE_URLS = {
     PROVIDER_OPENROUTER: "https://openrouter.ai/api/v1",
     PROVIDER_GROQ: "https://api.groq.com/openai/v1",
     PROVIDER_KOBOILLM: "https://litellm.koboi2026.biz.id",
+    PROVIDER_MISTRAL: "https://api.mistral.ai/v1",
+    PROVIDER_BLACKBOX: "https://api.blackbox.ai",
     PROVIDER_CUSTOM: "",
 }
 
@@ -59,6 +66,14 @@ _PROVIDERS = {
     },
     PROVIDER_KOBOILLM: {
         "module": koboillm_api,
+        "supports_auto_rotation": False,
+    },
+    PROVIDER_MISTRAL: {
+        "module": mistral_api,
+        "supports_auto_rotation": False,
+    },
+    PROVIDER_BLACKBOX: {
+        "module": blackbox_api,
         "supports_auto_rotation": False,
     },
     PROVIDER_CUSTOM: {
@@ -305,6 +320,38 @@ def get_metadata(
         if isinstance(result, dict) and "error" not in result:
             return _fill_keywords_if_short(result, keyword_count)
         return result
+    if provider_key == PROVIDER_MISTRAL:
+        result = module.get_mistral_metadata(
+            image_path,
+            api_key,
+            stop_event,
+            use_png_prompt=use_png_prompt,
+            use_video_prompt=use_video_prompt,
+            selected_model_input=effective_model,
+            keyword_count=keyword_count,
+            priority=priority,
+            is_vector_conversion=is_vector_conversion,
+        )
+        if isinstance(result, dict) and "error" not in result:
+            return _fill_keywords_if_short(result, keyword_count)
+        return result
+
+    if provider_key == PROVIDER_BLACKBOX:
+        result = module.get_blackbox_metadata(
+            image_path,
+            api_key,
+            stop_event,
+            use_png_prompt=use_png_prompt,
+            use_video_prompt=use_video_prompt,
+            selected_model_input=effective_model,
+            keyword_count=keyword_count,
+            priority=priority,
+            is_vector_conversion=is_vector_conversion,
+        )
+        if isinstance(result, dict) and "error" not in result:
+            return _fill_keywords_if_short(result, keyword_count)
+        return result
+
     result = module.get_openai_metadata(
         image_path,
         api_key,

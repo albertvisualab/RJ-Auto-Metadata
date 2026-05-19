@@ -64,9 +64,24 @@
 
 - Vision-specific model detection not implemented (basic prefix filter only)
 
+## Phase 4A Status: Complete
+
+### What Was Done
+
+- **UI bug fix**: `_refresh_provider_models()` now clears the model display (`model_var` + dropdown text) when selected provider has no cached models
+- **Provider add**: Created `src/api/mistral_api.py` (OpenAI-compatible, base URL `https://api.mistral.ai/v1`, public entry `get_mistral_metadata`)
+- **Provider add**: Created `src/api/blackbox_api.py` (OpenAI-compatible, base URL `https://api.blackbox.ai`, public entry `get_blackbox_metadata`)
+- **Provider registry**: Updated `src/api/provider_manager.py` with `PROVIDER_MISTRAL` and `PROVIDER_BLACKBOX` constants, added both to `PROVIDER_BASE_URLS`, `_PROVIDERS`, and `get_metadata()` dispatch routing
+
+### Validation Notes
+
+- Import and provider-list checks pass (`provider_manager.list_providers()` includes Mistral and Blackbox)
+- UI launch/routing confirmed against provider docs and configured base URLs
+- Real API-key execution for Mistral and Blackbox not validated due unavailable key credits in this session
+
 ## Next Phase
 
-Final integration testing, merge `dev` → `main`, tag new release.
+Phase 4B / final integration testing across all providers, then merge `dev` → `main` and tag next release.
 
 ## Key Decisions Already Made
 

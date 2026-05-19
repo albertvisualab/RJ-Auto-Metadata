@@ -51,6 +51,20 @@ Note: `fetch_models()` in `provider_manager.py` is a stub returning `[]`. Real A
 
 Remaining: merge `dev` → `main`, tag next version.
 
+## Phase 4A: Provider Expansion & UI Fix (`task/add-providers`) — Complete
+
+| # | Item | Status |
+|---|---|---|
+| P4A-1 | Fix model dropdown clear when cache is empty | ✅ Done |
+| P4A-2 | Add `src/api/mistral_api.py` | ✅ Done |
+| P4A-3 | Add `src/api/blackbox_api.py` | ✅ Done |
+| P4A-4 | Register both providers in `provider_manager.py` | ✅ Done |
+| P4A-5 | Update docs (`CURRENT_STATE`, `HANDOFF`, `ROADMAP`) | ✅ Done |
+
+Notes:
+- Mistral and Blackbox use OpenAI-compatible routing via configured base URLs.
+- Live key/credit validation is deferred to provider-backed testing.
+
 ## Out of Scope
 
 - No new providers beyond Custom

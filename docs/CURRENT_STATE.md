@@ -1,6 +1,6 @@
 # Current State — RJ Auto Metadata
 
-> Snapshot at Phase 2 completion.
+> Snapshot at Phase 4A completion.
 
 ## Version
 
@@ -9,10 +9,11 @@
 ## Branch Structure
 
 - `main` — stable release baseline (v3.11.3)
-- `dev` — integration branch (Phase 1 merged)
+- `dev` — integration branch (Phase 3 complete at `95fe354`)
 - `task/docs-governance` — Phase 0 work branch (merged to dev)
 - `task/refactor-backend` — Phase 1 work branch (merged to dev)
-- `task/refactor-ui` — Phase 2 work branch (current)
+- `task/refactor-ui` — Phase 2 work branch (merged to dev)
+- `task/add-providers` — Phase 4A work branch (current)
 
 ## Supported Providers
 
@@ -23,6 +24,8 @@
 | **OpenRouter** | Chat Completions | Unchanged |
 | **Groq** | Chat Completions | Unchanged |
 | **KoboiLLM** | Chat Completions | Unchanged |
+| **Mistral** | OpenAI compat (`/v1`) | Added in Phase 4A |
+| **Blackbox** | OpenAI compat (`/`) | Added in Phase 4A |
 | **Custom** | User-defined base URL | Added in Phase 1, UI added in Phase 2 |
 
 ## Technical Debt Resolved in Phase 1
@@ -57,9 +60,17 @@
 - **Readonly dropdowns**: All 5 CTkComboBox set to `state='readonly'` to prevent manual text entry
 - **Auto-fetch models**: On app launch and provider switch, models are auto-fetched in background if API keys exist; silent skip when no keys (first use)
 
+## Changes in Phase 4A
+
+- **Model dropdown clear fix**: `_refresh_provider_models()` now clears `model_var` + dropdown display when the selected provider has no cached models
+- **Mistral provider**: Added `src/api/mistral_api.py` using OpenAI-compatible endpoint `https://api.mistral.ai/v1`
+- **Blackbox provider**: Added `src/api/blackbox_api.py` using OpenAI-compatible endpoint `https://api.blackbox.ai`
+- **Provider registration**: Added Mistral + Blackbox to `provider_manager.py` constants, `PROVIDER_BASE_URLS`, `_PROVIDERS`, and `get_metadata()` dispatch
+
 ## Remaining Technical Debt
 
 - **Vision model filtering**: Basic prefix filter applied; no vision-specific detection yet
+- **Live-provider validation**: Mistral and Blackbox routing is wired, but real-key verification depends on available API credits
 
 ## Pending Phases
 

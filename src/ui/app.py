@@ -835,7 +835,9 @@ Configuration of application behavior:
             if hasattr(self, "model_dropdown"):
                 self.model_dropdown.set(self.available_models[0])
         elif not self.available_models:
-            pass
+            self.model_var.set("")
+            if hasattr(self, "model_dropdown"):
+                self.model_dropdown.set("")
 
     def _auto_fetch_models(self):
         """Silently fetch models if the current provider has API keys.
