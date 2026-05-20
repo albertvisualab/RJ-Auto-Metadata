@@ -45,7 +45,7 @@ from src.utils.system_checks import (check_ghostscript, check_ffmpeg, check_gtk_
 from src.metadata.exif_writer import check_exiftool_exists
 from src.api.api_key_checker import check_api_keys_status
 
-APP_VERSION = "3.11.3"
+APP_VERSION = "3.12.0"
 CONFIG_FILE = "config.json"
 
 class MetadataApp(ctk.CTk):
@@ -696,7 +696,7 @@ class MetadataApp(ctk.CTk):
             self.console_toggle_switch.grid(row=0, column=0, sticky="w", padx=(10, 5))
             ToolTip(self.console_toggle_switch, "Show/Hide Console Window")
 
-        watermark_label = ctk.CTkLabel(bottom_frame, text=f"© Riiicil 2025 - Ver {APP_VERSION}", font=ctk.CTkFont(size=10), text_color=("gray50", "gray70"))
+        watermark_label = ctk.CTkLabel(bottom_frame, text=f"© Riiicil 2026 - Ver {APP_VERSION}", font=ctk.CTkFont(size=10), text_color=("gray50", "gray70"))
         watermark_label.grid(row=0, column=1, sticky="e", padx=(5, 10))
         
     def _create_footer(self, parent):

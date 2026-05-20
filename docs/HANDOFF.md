@@ -2,6 +2,16 @@
 
 > Continuity document for agent sessions. Read this to resume work without full chat history.
 
+## Versioning Clarification — v3.12.0 vs "v4"
+
+> **For future agent sessions:** The governance docs (ROADMAP.md, ARCHITECTURE.md, CURRENT_STATE.md) reference a "v4 refactor" milestone. This refers to the *architectural* refactoring described in docs/CODEBASE_ANALYSIS.md — splitting app.py, unifying the API base class, decoupling batch processing, etc.
+>
+> **It does NOT mean the next release is numbered v4.**
+>
+> The release shipped from the dev branch in May 2026 is **v3.12.0** — a significant feature and refactoring release (multi-provider, Advanced tab, stop mechanism, prompt system overhaul) but one that does not yet complete the full architectural normalization.
+>
+> The "v4" label in docs = future architectural goal, not the next version number on the release page.
+
 ## Phase 0 Status: Complete
 
 ### What Was Done
@@ -167,7 +177,7 @@ Both are now resolved by the single centralized flag and the separated UI/stop-s
 
 ## Next Phase
 
-Final integration testing across all providers before merge `dev` → `main` and release tag.
+Dev branch has been merged to main and released as **v3.12.0** (May 2026). The next work is the architectural refactoring described in docs/CODEBASE_ANALYSIS.md: splitting app.py into focused modules, creating a unified API base class, decoupling batch processing, and completing the normalization described in docs/ANALISYS_REFACTORING.md.
 
 ## Key Decisions Already Made
 

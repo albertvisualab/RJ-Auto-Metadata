@@ -16,6 +16,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 -
 
+## [3.12.0] - 2026-05-20
+
+### Added
+- **Settings & Advanced Tab Layout**: Replaced flat settings row with a CTkTabview containing "Settings" and "Advanced" tabs for cleaner UI organization
+- **Advanced Tab — Custom Instruction**: Free-form text field for custom AI system instruction, persisted in config.json
+- **Advanced Tab — Hint**: Short hint field to guide metadata generation focus, passed to prompt builder
+- **Advanced Tab — Inject Keywords**: Keyword field that prepends user-defined terms to AI-generated keywords (deduped, respects keyword count limit)
+- **Advanced Tab — Title & Desc Limits**: Min words and max chars fields for title and description, linked to Quality preset or editable in Custom mode
+- **Custom Quality Option**: Added "Custom" entry to Quality dropdown — unlocks Advanced tab limit fields for free-form editing; switching back to a preset restores preset values, custom values are saved as shadow variables and persist across switches and app restarts
+- **Mistral Provider**: New provider using OpenAI-compatible SDK (api.mistral.ai)
+- **Blackbox Provider**: New provider using OpenAI-compatible SDK (api.blackbox.ai)
+- **Custom Provider**: 6th provider option — user supplies any OpenAI-compatible base URL
+- **Dynamic Model Fetching**: "Fetch" button calls GET /v1/models via OpenAI SDK; per-provider model lists cached and restored on launch
+- **CTkScrollableDropdown**: Scrollable popup for all ComboBox dropdowns (vendored, MIT license)
+- **Stop Flag Centralization**: src/utils/stop_flag.py — single global stop flag replacing per-provider flag copies
+
+### Changed
+- **Gemini API**: Fully migrated from google-genai SDK and REST API to OpenAI-compatible endpoint (v1beta/openai/) using the openai SDK; removed Auto Rotation
+- **Prompt System**: Rebuilt as dynamic function-based system with user_hint, custom_instruction, min_words_override, max_chars_override parameters; thread-local override mechanism for zero-touch integration with existing format processors
+- **API Load/Delete/Save buttons**: Removed; replaced by single "Fetch" button for model list retrieval
+- **Auto Retry**: Removed UI toggle; hardcoded to always enabled
+- **Advanced tab fields**: Locked (read-only) during batch processing; restored with correct state after processing completes
+- **Stop mechanism**: _check_thread_ended() timeout increased from 2.5s to 30s; UI reset and stop flag reset now separated to prevent premature stop-flag clearing while threads are still running
+- **requirements.txt**: Removed unused google-genai and Flask-SQLAlchemy; added openai
+
+### Fixed
+- **Quality dropdown stuck on previous value**: Replaced command-based CTkScrollableDropdown callback with StringVar.trace_add() — ensures dropdown display, variable, and callback stay in sync regardless of widget internals
+- **Custom Quality values lost on preset switch**: Shadow variables (_custom_title_min, etc.) save Custom values when leaving Custom mode and restore them when returning; persisted in config.json
+- **Advanced tab fields not locking during processing**: Fields now disabled at processing start and re-enabled with correct lock state at end
+- **Stop not working across providers**: Each provider previously had its own independent stop flag; centralized flag now propagates stop instantly to all active worker threads
+- **UI reset race condition**: Stop flag was being cleared before worker threads confirmed dead; now cleared only after thread join confirms completion
+
 ## [3.11.3] - 2026-04-04
 
 ### Added
