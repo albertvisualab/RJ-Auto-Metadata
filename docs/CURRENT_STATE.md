@@ -4,7 +4,7 @@
 
 ## Version
 
-**3.11.3** (tagged `v3.11.3` on `main`)
+**3.12.1** (tagged `v3.12.1` on `main`)
 
 ## Branch Structure
 
@@ -114,6 +114,13 @@
 - **Dynamic Advanced Tab Entry Sync and Locking**: Implemented dynamic synchronization (`_on_quality_change()`). Setting the Quality dropdown to `"Detailed"`, `"Balanced"`, or `"Less"` automatically overwrites the min/max limits in the Advanced tab with preset defaults and disables the entry fields (read-only). Selecting `"Custom"` unlocks the fields for direct editing, while preserving custom inputs.
 - **Advanced Field Protection**: Updated `_disable_ui_during_processing()` and `_reset_ui_after_processing()` to lock all Advanced tab fields (textbox, entries) during processing and restore them properly afterwards.
 - **Phase 4C fully complete**: All Advanced tab values now flow from UI to processing pipeline with full preset and custom sync.
+
+## Changes in Phase 4D (Hotfix — Mistral & Blackbox Keyword Bug)
+
+- **Mistral keyword bug fixed**: `get_mistral_metadata()` now sends a system message enforcing JSON-only output, appends an explicit keyword-count instruction to the user prompt, uses `response_format={"type": "json_object"}`, raises `max_tokens` from 1024 to 2048, and remaps `"keywords"` → `"tags"` in the returned dict so downstream consumers find the correct key.
+- **Blackbox keyword bug fixed**: Same changes applied to `get_blackbox_metadata()`. The `response_format` parameter is wrapped in a try/except that retries without it if the provider does not support it.
+- **Fallback no longer triggered**: Before this fix, `provider_manager._fill_keywords_if_short()` found zero tags and replaced them with words split from the title/description. After the fix, the correct array is returned under `"tags"` and the fallback is bypassed.
+- **Version Bumped to 3.12.1**: Bumped version from 3.12.0 to 3.12.1 across the codebase.
 
 ## Remaining Technical Debt
 

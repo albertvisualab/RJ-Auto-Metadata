@@ -2,13 +2,13 @@
 
 > Continuity document for agent sessions. Read this to resume work without full chat history.
 
-## Versioning Clarification — v3.12.0 vs "v4"
+## Versioning Clarification — v3.12.1 vs "v4"
 
 > **For future agent sessions:** The governance docs (ROADMAP.md, ARCHITECTURE.md, CURRENT_STATE.md) reference a "v4 refactor" milestone. This refers to the *architectural* refactoring described in docs/CODEBASE_ANALYSIS.md — splitting app.py, unifying the API base class, decoupling batch processing, etc.
 >
 > **It does NOT mean the next release is numbered v4.**
 >
-> The release shipped from the dev branch in May 2026 is **v3.12.0** — a significant feature and refactoring release (multi-provider, Advanced tab, stop mechanism, prompt system overhaul) but one that does not yet complete the full architectural normalization.
+> The release shipped from the dev branch in May 2026 is **v3.12.1** — a significant feature and refactoring release (multi-provider, Advanced tab, stop mechanism, prompt system overhaul) but one that does not yet complete the full architectural normalization.
 >
 > The "v4" label in docs = future architectural goal, not the next version number on the release page.
 
@@ -173,7 +173,31 @@ Both are now resolved by the single centralized flag and the separated UI/stop-s
 ### What Is NOT Done / Deferred
 
 - Injected keywords do NOT affect EXIF (already written inside format processors before return); only CSV and returned metadata benefit
+
 - `desc_min_words` and `desc_max_chars` are captured in `prompt_config` but not wired to `select_prompt()` (prompt builder uses single min/max for both title and desc)
+
+## Phase 4D Status: Complete (Hotfix — Mistral & Blackbox Keyword Bug)
+
+### What Was Done
+
+- **Root cause confirmed**: Live API test proved that `mistral_api.py` and `blackbox_api.py` 
+  shared two bugs: (A) no system message causing the model to respond in Markdown prose instead
+  of JSON, and (B) returning the keyword array under the key `"keywords"` instead of `"tags"`,
+  causing `provider_manager._fill_keywords_if_short()` to fall back to splitting title/description
+  words into keywords — producing 12–15 low-quality keywords instead of the 49–60 expected.
+- **Mistral fix**: Added system message enforcing JSON-only output; injected keyword-count
+  instruction into user prompt; added `response_format={"type": "json_object"}`; raised
+  `max_tokens` from 1024 to 2048; remapped `"keywords"` → `"tags"` in parsed result.
+- **Blackbox fix**: Applied same fixes; wrapped `response_format` in try/except with fallback
+  retry because Blackbox may not support the parameter.
+- **Version Bump**: Bumped application version from `3.12.0` to `3.12.1` in all required locations
+  (`src/ui/app.py`, `setup.iss`, `AGENTS.md`, `README.md`, `CHANGELOG.md`, `docs/HANDOFF.md`, `docs/CURRENT_STATE.md`).
+
+### Validation Notes
+
+- Tested live against Mistral API (`pixtral-12b-2409`) with real key — fixed payload produced
+  78 proper AI-generated keywords; `"tags"` key correctly populated; no fallback triggered.
+- Blackbox fix is structurally identical; live validation depends on available key credits.
 
 ## Next Phase
 

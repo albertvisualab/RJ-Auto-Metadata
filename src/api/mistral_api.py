@@ -89,12 +89,33 @@ def get_mistral_metadata(
     if check_stop_event(stop_event, "Mistral: stop requested before request"):
         return {"error": "stopped"}
 
+    try:
+        kw_limit = int(str(keyword_count).strip())
+        if kw_limit < 1:
+            kw_limit = 49
+    except (ValueError, TypeError):
+        kw_limit = 49
+    kw_request = min(kw_limit + 11, 70)
+
     prompt_text = select_prompt(
         priority=priority,
         use_png_prompt=use_png_prompt,
         use_video_prompt=use_video_prompt,
         provider="mistral",
     )
+
+    system_message = (
+        "You are a professional stock-media metadata specialist. "
+        "You always respond with a single, valid JSON object and nothing else. "
+        "No markdown, no explanation, no prose — only the JSON."
+    )
+    keyword_instruction = (
+        f"\n\nReturn exactly {kw_request} single-word keywords in the 'keywords' array. "
+        f"Ensure at least {kw_limit} are unique and directly relevant to the image. "
+        "Do not use multi-word phrases. If fewer obvious keywords exist, add closely-related "
+        "synonyms or variations to reach the target count."
+    )
+    prompt_with_instruction = prompt_text + keyword_instruction
 
     model = selected_model_input or "mistral-small-latest"
 
@@ -115,23 +136,27 @@ def get_mistral_metadata(
 
         client = OpenAI(api_key=api_key, base_url=BASE_URL, timeout=120.0)
 
+        messages = [
+            {"role": "system", "content": system_message},
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime};base64,{image_data}"
+                        },
+                    },
+                    {"type": "text", "text": prompt_with_instruction},
+                ],
+            },
+        ]
+
         response = client.chat.completions.create(
             model=model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime};base64,{image_data}"
-                            },
-                        },
-                        {"type": "text", "text": prompt_text},
-                    ],
-                }
-            ],
-            max_tokens=1024,
+            messages=messages,
+            response_format={"type": "json_object"},
+            max_tokens=2048,
         )
 
         if check_stop_event(stop_event, "Mistral: stop requested after response"):
@@ -142,6 +167,16 @@ def get_mistral_metadata(
 
         import json
         metadata = json.loads(cleaned)
+
+        raw_keywords = metadata.get("keywords", [])
+        if isinstance(raw_keywords, list):
+            metadata["tags"] = raw_keywords
+        elif isinstance(raw_keywords, str):
+            metadata["tags"] = [k.strip() for k in raw_keywords.split(",") if k.strip()]
+        else:
+            metadata["tags"] = []
+        metadata.pop("keywords", None)
+
         log_message("Metadata successfully extracted from Mistral response", "success")
         return metadata
 

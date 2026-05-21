@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 -
 
+## [3.12.1] - 2026-05-21
+
+### Fixed
+- **Mistral & Blackbox Keywords**: Fixed a bug where direct Mistral and Blackbox provider requests returned keywords under the `"keywords"` key instead of `"tags"`, causing the fallback mechanism to replace them with title-derived words.
+- **Mistral & Blackbox JSON format**: Added system instructions and `response_format` JSON enforcement to prevent Markdown-wrapped responses.
+
 ## [3.12.0] - 2026-05-20
 
 ### Added
