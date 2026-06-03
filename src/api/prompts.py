@@ -83,8 +83,9 @@ def _build_gemini_prompt(
         f"{intro}{hint_block}\n"
         '{"title": ["' + title_rule + '"], '
         '"description": ["' + desc_rule + '"], '
-        '"keywords": ["Give me 60 unique keywords, ensure at least 55 unique; '
-        'if fewer are obvious, add closely-related synonyms/variations. No multi-word phrases. Array"], '
+        '"keywords": ["Give me 60 unique keywords. Optimize for stock SEO. '
+        'CRITICAL: Do NOT repeat the same base word in multiple keywords. Deduplicate concepts to maximize coverage. '
+        'No multi-word phrases (e.g., instead of \'minimalist design\', use \'minimalist, design\'). Array"], '
         '"adobe_stock_category": ["pick number and name: ' + _ADOBE_STOCK_CATEGORY_LIST + '"], '
         '"shutterstock_category": ["pick: ' + shutterstock + '"]}'
         + custom_block
@@ -134,8 +135,9 @@ def _build_openai_prompt(
         f"descriptive, unique, no special characters.{char_note}\n"
         f"- Description: Minimum {min_words} words, maximum {max_chars} characters, "
         "detailed, unique, no special characters.\n"
-        "- Keywords: Provide up to 60 unique keywords; ensure at least 55 unique. "
-        "If fewer are obvious, add closely-related synonyms/variations. No multi-word phrases.\n"
+        "- Keywords: Provide up to 60 unique keywords. Optimize for stock SEO. "
+        "CRITICAL: Do NOT repeat the same base word in multiple keywords. Deduplicate concepts to maximize coverage. "
+        "No multi-word phrases (e.g., instead of 'minimalist design', use 'minimalist, design').\n"
         f"- Adobe Stock category: choose the number and name from: {_ADOBE_STOCK_CATEGORY_LIST}.\n"
         f"- Shutterstock category: choose one from: {shutterstock}.\n"
         f"{custom_block}\n"

@@ -37,15 +37,20 @@ WRITABLE_METADATA_VIDEO_EXTENSIONS = ('.mp4', '.mov', '.avi')
 title_history = {}
 
 def sanitize_filename(filename):
-    sanitized = filename.replace('_', ' ')
-    sanitized = re.sub(r'[^a-zA-Z0-9 ]', '', sanitized)
-    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+    # Convert to lowercase for SEO
+    sanitized = filename.lower()
+    # Replace spaces and underscores with hyphens
+    sanitized = sanitized.replace('_', '-').replace(' ', '-')
+    # Remove anything that isn't a letter, number, or hyphen
+    sanitized = re.sub(r'[^a-z0-9-]', '', sanitized)
+    # Replace multiple hyphens with a single hyphen
+    sanitized = re.sub(r'-+', '-', sanitized).strip('-')
     max_len = 200
     if len(sanitized) > max_len:
-        sanitized = sanitized[:max_len].strip()
+        sanitized = sanitized[:max_len].strip('-')
     if not sanitized:
         timestamp_fallback = int(time.time() * 1000)
-        sanitized = f"untitled_{timestamp_fallback}"
+        sanitized = f"untitled-{timestamp_fallback}"
     return sanitized
 
 def sanitize_csv_field(value):

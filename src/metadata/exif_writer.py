@@ -490,6 +490,42 @@ def write_exif_with_exiftool(image_path, output_path, metadata, stop_event):
         if cleaned_tags:
             for tag in cleaned_tags:
                 command.append(f'-XMP-dc:Subject+={tag}')
+                
+    try:
+        from src.api.prompts import _prompt_overrides
+        exif_meta = _prompt_overrides.config.get("exif_metadata", {})
+        if exif_meta:
+            if exif_meta.get("author"):
+                command.extend([
+                    f"-XMP-dc:Creator={exif_meta['author']}",
+                    f"-IPTC:By-line={exif_meta['author']}",
+                    f"-EXIF:Artist={exif_meta['author']}"
+                ])
+            if exif_meta.get("copyright"):
+                command.extend([
+                    f"-XMP-dc:Rights={exif_meta['copyright']}",
+                    f"-IPTC:CopyrightNotice={exif_meta['copyright']}",
+                    f"-EXIF:Copyright={exif_meta['copyright']}"
+                ])
+            if exif_meta.get("usage_terms"):
+                command.append(f"-XMP-xmpRights:UsageTerms={exif_meta['usage_terms']}")
+            if exif_meta.get("contact_email"):
+                command.append(f"-XMP-iptcExt:CreatorWorkEmail={exif_meta['contact_email']}")
+            if exif_meta.get("contact_web"):
+                command.append(f"-XMP-iptcExt:CreatorWorkURL={exif_meta['contact_web']}")
+            if exif_meta.get("contact_phone"):
+                command.append(f"-XMP-iptcExt:CreatorWorkTelephone={exif_meta['contact_phone']}")
+            if exif_meta.get("contact_city"):
+                command.append(f"-XMP-iptcExt:CreatorWorkCity={exif_meta['contact_city']}")
+            if exif_meta.get("contact_country"):
+                command.append(f"-XMP-iptcExt:CreatorWorkCountry={exif_meta['contact_country']}")
+            if exif_meta.get("contact_address"):
+                command.append(f"-XMP-iptcExt:CreatorWorkAddress={exif_meta['contact_address']}")
+            if exif_meta.get("licensor"):
+                command.append(f"-XMP-plus:LicensorName={exif_meta['licensor']}")
+    except Exception as e:
+        log_message(f"Warning: Failed to extract additional EXIF metadata: {e}")
+        
     command.append(output_path)
     exiftool_process = None
     try:
@@ -627,6 +663,32 @@ def write_exif_to_video(input_path, output_path, metadata, stop_event):
                 f"-XMP:Keywords={keywords_str}",
                 f"-XMP:Subject={keywords_str}"
             ])
+            
+    try:
+        from src.api.prompts import _prompt_overrides
+        exif_meta = _prompt_overrides.config.get("exif_metadata", {})
+        if exif_meta:
+            if exif_meta.get("author"):
+                command.extend([
+                    f"-XMP-dc:Creator={exif_meta['author']}",
+                    f"-QuickTime:Author={exif_meta['author']}"
+                ])
+            if exif_meta.get("copyright"):
+                command.extend([
+                    f"-XMP-dc:Rights={exif_meta['copyright']}",
+                    f"-QuickTime:Copyright={exif_meta['copyright']}"
+                ])
+            if exif_meta.get("usage_terms"):
+                command.append(f"-XMP-xmpRights:UsageTerms={exif_meta['usage_terms']}")
+            if exif_meta.get("contact_email"):
+                command.append(f"-XMP-iptcExt:CreatorWorkEmail={exif_meta['contact_email']}")
+            if exif_meta.get("contact_web"):
+                command.append(f"-XMP-iptcExt:CreatorWorkURL={exif_meta['contact_web']}")
+            if exif_meta.get("licensor"):
+                command.append(f"-XMP-plus:LicensorName={exif_meta['licensor']}")
+    except Exception as e:
+        log_message(f"Warning: Failed to extract additional video EXIF metadata: {e}")
+            
     command.append(output_path)
     return _execute_video_exiftool_command(command, output_path, stop_event, processed_title, processed_description, cleaned_tags[:49] if cleaned_tags else [])
 

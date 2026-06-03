@@ -72,6 +72,7 @@ def process_vector_file(
     embedding_enabled=True,
     keyword_count="49",
     priority="Details",
+    base_url_override=None,
 ):
     filename = os.path.basename(input_path)
     _, ext = os.path.splitext(filename)
@@ -160,6 +161,7 @@ def process_vector_file(
         keyword_count=keyword_count,
         priority=priority,
         is_vector_conversion=True,
+        base_url_override=base_url_override,
     )
     
     if temp_raster_path and os.path.exists(temp_raster_path):
@@ -308,6 +310,7 @@ def process_single_file(
     priority="Details",
     stop_event=None,
     prompt_config=None,
+    base_url_override=None,
 ):
     if prompt_config is None:
         prompt_config = {}
@@ -395,6 +398,7 @@ def process_single_file(
                 embedding_enabled,
                 keyword_count,
                 priority,
+                base_url_override=base_url_override,
             )
         elif ext_lower in ['.eps', '.ai', '.svg']:
             status, processed_metadata, initial_output_path = process_vector_file(
@@ -409,6 +413,7 @@ def process_single_file(
                 embedding_enabled,
                 keyword_count,
                 priority,
+                base_url_override=base_url_override,
             )
         elif ext_lower in ['.jpg', '.jpeg']:
             from src.processing.image_processing.format_jpg_jpeg_processing import process_jpg_jpeg
@@ -423,6 +428,7 @@ def process_single_file(
                 embedding_enabled,
                 keyword_count,
                 priority,
+                base_url_override=base_url_override,
             )
         elif ext_lower == '.png':
             from src.processing.image_processing.format_png_processing import process_png
@@ -437,6 +443,7 @@ def process_single_file(
                 embedding_enabled,
                 keyword_count,
                 priority,
+                base_url_override=base_url_override,
             )
         else:
             log_message(f"Unsupported file format for API: {ext_lower}")
@@ -526,6 +533,13 @@ def process_single_file(
                         if max_keywords < 1: max_keywords = 49
                     except Exception:
                         max_keywords = 49
+                        
+                    exif_meta = prompt_config.get("exif_metadata", {})
+                    model_release = exif_meta.get("model_release", "")
+                    property_release = exif_meta.get("property_release", "")
+                    releases_str = ", ".join([r for r in [model_release, property_release] if r])
+                    contact_country = exif_meta.get("contact_country", "")
+
                     write_to_platform_csvs(
                         csv_subfolder,
                         final_filename_for_csv,
@@ -535,7 +549,9 @@ def process_single_file(
                         auto_kategori_enabled=auto_kategori_enabled,
                         is_vector=is_vector_file,
                         max_keywords=max_keywords,
-                        is_video=is_video
+                        is_video=is_video,
+                        releases=releases_str,
+                        country=contact_country
                     )
                 except Exception as e_csv:
                     log_message(f"Warning: Failed to write metadata to CSV for {final_filename_for_csv}: {e_csv}")
@@ -578,6 +594,7 @@ def batch_process_files(
     priority="Details",
     bypass_api_key_limit=False,
     prompt_config=None,
+    base_url_override=None,
 ):
     if prompt_config is None:
         prompt_config = {}
@@ -749,6 +766,7 @@ def batch_process_files(
                             priority,
                             stop_event,
                             prompt_config,
+                            base_url_override,
                         )
                         batch_futures.append(future)
                         futures.append(future)

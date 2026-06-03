@@ -148,7 +148,7 @@ def sanitize_vecteezy_keywords(keywords):
         clean_kw = re.sub(r'\s+', ' ', clean_kw).strip()
         return clean_kw
 
-def write_123rf_csv_safe(csv_path, filename, description, keywords):
+def write_123rf_csv_safe(csv_path, filename, description, keywords, country=""):
     """Thread-safe 123RF CSV writing dengan file locking"""
     csv_dir = os.path.dirname(csv_path)
     if not os.path.exists(csv_dir):
@@ -169,8 +169,9 @@ def write_123rf_csv_safe(csv_path, filename, description, keywords):
                 safe_filename = filename.replace('"', '""')
                 safe_description = truncated_description.replace('"', '""')
                 safe_keywords = keywords.replace('"', '""')
+                safe_country = country.replace('"', '""') if country else "ID"
                 
-                csvfile.write(f'{safe_filename},"","{safe_description}","{safe_keywords}","ID"\n')
+                csvfile.write(f'{safe_filename},"","{safe_description}","{safe_keywords}","{safe_country}"\n')
                 csvfile.flush()  
                 
             return True
@@ -321,7 +322,7 @@ def validate_metadata_completeness(metadata, filename="unknown"):
     
     return True, validated_metadata, issues
 
-def write_to_platform_csvs_safe(csv_dir, filename, title, description, keywords, auto_kategori_enabled=True, is_vector=False, max_keywords=49, is_video=False):
+def write_to_platform_csvs_safe(csv_dir, filename, title, description, keywords, auto_kategori_enabled=True, is_vector=False, max_keywords=49, is_video=False, releases="", country=""):
 
     try:
         if not os.path.exists(csv_dir):
@@ -411,7 +412,7 @@ def write_to_platform_csvs_safe(csv_dir, filename, title, description, keywords,
             as_header = ["Filename", "Title", "Keywords", "Category", "Releases"]
             as_title_clean = sanitize_adobe_stock_title(safe_title)
             as_keywords_clean = sanitize_adobe_stock_keywords(keywords if isinstance(keywords, list) else as_keywords)
-            as_data_row = [safe_filename, as_title_clean, as_keywords_clean, as_category, ""]
+            as_data_row = [safe_filename, as_title_clean, as_keywords_clean, as_category, releases]
             
             if write_to_csv_thread_safe(as_csv_path, as_header, as_data_row):
                 success_count += 1
@@ -437,7 +438,7 @@ def write_to_platform_csvs_safe(csv_dir, filename, title, description, keywords,
         
         try:
             rf_csv_path = os.path.join(csv_dir, "123rf_export.csv")
-            if write_123rf_csv_safe(rf_csv_path, safe_filename, safe_description, as_keywords):
+            if write_123rf_csv_safe(rf_csv_path, safe_filename, safe_description, as_keywords, country):
                 success_count += 1
             else:
                 failed_platforms.append("123RF")
@@ -519,12 +520,12 @@ def write_to_platform_csvs_safe(csv_dir, filename, title, description, keywords,
         log_message(f"Traceback: {traceback.format_exc()}", "error")
         return False, ["All platforms - Critical error"]
 
-def write_to_platform_csvs(csv_dir, filename, title, description, keywords, auto_kategori_enabled=True, is_vector=False, max_keywords=49, is_video=False):
+def write_to_platform_csvs(csv_dir, filename, title, description, keywords, auto_kategori_enabled=True, is_vector=False, max_keywords=49, is_video=False, releases="", country=""):
 
     try:
         success, failed_platforms = write_to_platform_csvs_safe(
             csv_dir, filename, title, description, keywords, 
-            auto_kategori_enabled, is_vector, max_keywords, is_video
+            auto_kategori_enabled, is_vector, max_keywords, is_video, releases, country
         )
         
         if failed_platforms and success:
