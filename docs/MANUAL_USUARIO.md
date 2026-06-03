@@ -1,87 +1,110 @@
-<div style="background-color: #F9F4EF; color: #141313; padding: 30px; font-family: sans-serif; border-radius: 8px;">
+<div style="background-color: #F9F4EF; color: #141313; padding: 40px; font-family: sans-serif; border-radius: 8px; line-height: 1.6;">
 
-<h1 style="color: #97A788; border-bottom: 2px solid #D6B972; padding-bottom: 10px;">📖 RJ Auto Metadata - Manual de Usuario</h1>
+<h1 style="color: #97A788; border-bottom: 3px solid #D6B972; padding-bottom: 10px;">📖 RJ Auto Metadata - Manual de Usuario Completo</h1>
 
-<p>Bienvenido al manual completo de <b>Auto Metadata</b>. Esta herramienta automatiza la generación de metadatos profesionales para archivos multimedia (imágenes y vídeos) utilizando Inteligencia Artificial, preparando tu contenido para las agencias de stock más exigentes.</p>
+<p>Bienvenido al manual definitivo de <b>Auto Metadata</b>. Esta herramienta ha sido diseñada para automatizar el tedioso proceso de generar metadatos profesionales para archivos multimedia (imágenes y vídeos) utilizando Inteligencia Artificial, y prepararlos directamente para su venta en las agencias de stock más exigentes.</p>
 
-<h2 style="color: #D6B972; margin-top: 30px;">🎯 Niveles de Detalle (Prompts de IA)</h2>
-<p>El parámetro <i>Nivel Detalle</i> ajusta directamente las instrucciones (prompts) que se envían al motor de IA, controlando la longitud y profundidad de los títulos generados. Las opciones disponibles son:</p>
+<h2 style="color: #D6B972; margin-top: 40px; border-bottom: 1px solid #e0d5c1; padding-bottom: 5px;">⚙️ 1. Panel de Configuración y Origen</h2>
 
-<table style="width: 100%; border-collapse: collapse; margin-top: 15px; background-color: #F9F4EF;">
+<h3 style="color: #97A788;">📁 Gestión de Directorios</h3>
+<p>El primer paso es indicarle a la aplicación dónde están tus archivos y dónde quieres que los guarde terminados:</p>
+<ul>
+  <li><b>Origen (Directorio de Entrada):</b> Selecciona la carpeta donde tienes tus fotos originales (<code>.jpg</code>, <code>.png</code>) o vídeos listos para procesar.</li>
+  <li><b>Salida (Directorio de Salida):</b> La carpeta donde se guardarán los archivos una vez procesados y donde se generarán las hojas de cálculo CSV.</li>
+</ul>
+
+<blockquote style="background-color: #f1ebd8; border-left: 4px solid #D6B972; padding: 10px 15px; margin: 15px 0; font-size: 0.95em;">
+  <b>💡 Tip de Flujo de Trabajo:</b> Mantén tus carpetas originales limpias. La aplicación <b>nunca</b> sobrescribe tus originales; copia el archivo a la carpeta de salida y le inyecta los metadatos allí.
+</blockquote>
+
+<h2 style="color: #D6B972; margin-top: 40px; border-bottom: 1px solid #e0d5c1; padding-bottom: 5px;">🤖 2. Configuración del Motor de IA</h2>
+
+<h3 style="color: #97A788;">Niveles de Detalle (Prompts de IA)</h3>
+<p>El <i>Nivel Detalle</i> es el corazón de la aplicación. Ajusta las directrices exactas que se envían al motor de IA, controlando la longitud y profundidad de los títulos y descripciones.</p>
+
+<table style="width: 100%; border-collapse: collapse; margin-top: 15px; background-color: #ffffff; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
   <tr style="background-color: #97A788; color: #F9F4EF;">
-    <th style="padding: 10px; text-align: left; border: 1px solid #D6B972;">Nivel</th>
-    <th style="padding: 10px; text-align: left; border: 1px solid #D6B972;">Longitud del Título</th>
-    <th style="padding: 10px; text-align: left; border: 1px solid #D6B972;">Descripción y Uso Ideal</th>
+    <th style="padding: 12px; text-align: left; border: 1px solid #d1c8b4;">Nivel</th>
+    <th style="padding: 12px; text-align: left; border: 1px solid #d1c8b4;">Longitud Objetivo</th>
+    <th style="padding: 12px; text-align: left; border: 1px solid #d1c8b4;">Uso Ideal y Comportamiento</th>
   </tr>
-  <tr style="background-color: #F9F4EF; color: #141313; border-bottom: 1px solid #D6B972;">
-    <td style="padding: 10px; border: 1px solid #D6B972;"><b>Detailed</b></td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">Mínimo 6 palabras<br>Máximo 180 caracteres</td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">La opción por defecto. Obliga a la IA a ser muy observadora y generar descripciones ricas y largas. Ideal para agencias de stock que premian el detalle descriptivo.</td>
+  <tr style="color: #141313;">
+    <td style="padding: 12px; border: 1px solid #e0d5c1;"><b>Detailed</b></td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">6 a 180 caracteres</td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">La IA se vuelve hiperexhaustiva. Describe colores, fondos, texturas y estados de ánimo. Ideal para Adobe Stock o Shutterstock, que premian el detalle descriptivo masivo.</td>
   </tr>
-  <tr style="background-color: #F9F4EF; color: #141313; border-bottom: 1px solid #D6B972;">
-    <td style="padding: 10px; border: 1px solid #D6B972;"><b>Balanced</b></td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">Mínimo 5 palabras<br>Máximo 165 caracteres</td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">Un punto intermedio perfecto. Genera títulos equilibrados que no resultan ni demasiado pesados ni demasiado escuetos.</td>
+  <tr style="color: #141313; background-color: #faf7f2;">
+    <td style="padding: 12px; border: 1px solid #e0d5c1;"><b>Balanced</b></td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">5 a 165 caracteres</td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">Punto intermedio perfecto. Descripciones naturales que capturan la esencia sin caer en la verborrea excesiva.</td>
   </tr>
-  <tr style="background-color: #F9F4EF; color: #141313; border-bottom: 1px solid #D6B972;">
-    <td style="padding: 10px; border: 1px solid #D6B972;"><b>Less (Rápido)</b></td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">Mínimo 4 palabras<br>Máximo 150 caracteres</td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">Títulos directos, cortos y al grano. Utilízalo si tus imágenes son sencillas o prefieres metadatos muy limpios.</td>
+  <tr style="color: #141313;">
+    <td style="padding: 12px; border: 1px solid #e0d5c1;"><b>Less</b></td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">4 a 150 caracteres</td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">Títulos cortos y al grano. Usar para sujetos recortados (aislados en blanco) o ilustraciones muy minimalistas.</td>
   </tr>
-  <tr style="background-color: #F9F4EF; color: #141313;">
-    <td style="padding: 10px; border: 1px solid #D6B972;"><b>Custom</b></td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">Adaptable</td>
-    <td style="padding: 10px; border: 1px solid #D6B972;">Permite al sistema flexibilizar los límites basándose fuertemente en lo que escribas en las <i>Instrucciones Adicionales</i>.</td>
+  <tr style="color: #141313; background-color: #faf7f2;">
+    <td style="padding: 12px; border: 1px solid #e0d5c1;"><b>Custom</b></td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">Adaptable</td>
+    <td style="padding: 12px; border: 1px solid #e0d5c1;">Libera las restricciones. Se basará un 100% en lo que tú le pidas en las <i>Instrucciones Adicionales</i>.</td>
   </tr>
 </table>
 
-<h2 style="color: #D6B972; margin-top: 40px;">⚙️ Funcionalidades y Secciones Principales</h2>
-
-<h3 style="color: #97A788;">📂 1. Gestión de Directorios</h3>
+<h3 style="color: #97A788; margin-top: 25px;">Instrucciones Adicionales (Custom Prompting)</h3>
+<p>Si la IA no entiende el contexto visual de tus fotos, puedes decírselo aquí. Este texto se fusiona directamente con la instrucción principal de la IA.</p>
 <ul>
-  <li><b>Origen (Directorio de Entrada):</b> La carpeta donde tienes tus fotos (.jpg, .png) o vídeos listos para procesar.</li>
-  <li><b>Salida (Directorio de Salida):</b> La carpeta donde se guardarán los archivos una vez inyectados con los nuevos metadatos.</li>
-  <li><i>Nota:</i> Si usas Docker, seleccionarás rutas internas (ej: <code>/app/src</code>). Si lo usas en local, podrás navegar por tu disco duro de forma natural.</li>
+  <li><b>Ejemplo Malo:</b> <i>"Pon títulos guays."</i> (Demasiado vago).</li>
+  <li><b>Ejemplo Bueno:</b> <i>"Estas imágenes son renders 3D arquitectónicos. Ignora a las personas desenfocadas y céntrate en describir los materiales de construcción (hormigón, madera, cristal) y la iluminación natural."</i></li>
 </ul>
 
-<h3 style="color: #97A788;">🤖 2. Modelo IA y Ajustes Avanzados</h3>
+<h2 style="color: #D6B972; margin-top: 40px; border-bottom: 1px solid #e0d5c1; padding-bottom: 5px;">🚀 3. Funciones de Automatización Clave</h2>
+
+<h3 style="color: #97A788;">✏️ Renombrado Automático (SEO)</h3>
+<p><b>Activando esta casilla</b>, la aplicación cambiará el nombre original de tu archivo (ej: <code>IMG_4922.jpg</code>) por un nombre hiper-optimizado para buscadores basado en el título generado por la IA (ej: <code>elegant-table-setting-with-candles.jpg</code>).</p>
+<p><i>Nota sobre el orden:</i> El renombrado es puramente semántico. Si tenías fotos ordenadas numéricamente, al usar nombres descriptivos perderán ese orden alfabético, pero a cambio ganarás tracción orgánica en las búsquedas de las agencias.</p>
+
+<h3 style="color: #97A788;">🏷️ Auto Categorizar para Agencias Stock</h3>
+<p><b>Activando esta casilla</b>, el sistema leerá el Título y las Keywords que acaba de generar la IA y utilizará un algoritmo interno para asignar la <b>Categoría Oficial</b> correspondiente de Adobe Stock y Shutterstock.</p>
 <ul>
-  <li><b>Proveedor y Modelo:</b> Te permite seleccionar qué "cerebro" usar (OpenRouter, Gemini, Groq, etc).</li>
-  <li><b>Cantidad Keywords:</b> Ajusta exactamente cuántas palabras clave (tags) quieres que genere la IA para cada archivo (entre 10 y 100).</li>
-  <li><b>Instrucciones Adicionales:</b> Un campo de texto libre crucial. Aquí puedes guiar a la IA. <i>Ejemplo: "Ignora las personas del fondo y céntrate solo en el coche rojo deportivo. Usa un tono cinematográfico."</i></li>
+  <li><i>Ejemplo:</i> Si la IA genera palabras como <i>"dog", "puppy", "pet"</i>, el sistema mapeará automáticamente a la categoría <b>"Animals/Wildlife"</b> en el CSV de Shutterstock, y a la categoría <b>"Animals" (número 1)</b> en Adobe Stock.</li>
+  <li>Si desactivas esto, las columnas de categoría en los archivos CSV se quedarán en blanco.</li>
 </ul>
 
-<h3 style="color: #97A788;">📝 3. Metadatos Fijos y Plantillas</h3>
-<p>Además de la información generada por IA, puedes inyectar datos legales estáticos a todos tus archivos de golpe:</p>
+<h2 style="color: #D6B972; margin-top: 40px; border-bottom: 1px solid #e0d5c1; padding-bottom: 5px;">📝 4. Metadatos Fijos y Plantillas (El Sistema Dual)</h2>
+
+<p>Es vital entender que esta aplicación usa un <b>Sistema Dual</b>. La IA solo genera contenido comercial (Títulos y Keywords), pero tus datos personales de Autor se escriben en el archivo mediante un proceso separado para garantizar su integridad legal.</p>
+
+<h3 style="color: #97A788;">Incrustación EXIF Pura</h3>
+<p>Cuando rellenas los campos de <b>Autor, Copyright, Email, Web, etc.</b>, esta información NO se envía a la IA (para evitar que ensucie los títulos SEO). En cambio, se inyecta silenciosamente como <b>Metadatos Puros (EXIF, IPTC, XMP)</b> directamente en la estructura interna del archivo JPG/PNG/MP4. Así, si alguien descarga tu foto, tu autoría viaja con ella para siempre.</p>
+
+<h3 style="color: #97A788;">Conexión de Permisos con Archivos CSV</h3>
+<p>Dentro de la pestaña de <b>Licencias y Permisos</b>, hay campos especiales que se sincronizan con las hojas de cálculo generadas:</p>
 <ul>
-  <li><b>Información Base:</b> Autor, Copyright y Términos de Uso.</li>
-  <li><b>Contacto y Licencias:</b> Información de email, teléfono, ciudad, y códigos de autorización (Model Release).</li>
-  <li><b>Gestor de Plantillas (¡Nuevo!):</b> En lugar de rellenar tus datos cada vez, escribe tu Copyright y Contacto, ponle un "Nombre" (ej. <i>Mi Estudio 2026</i>) y pulsa <b>Guardar</b>. La próxima vez, solo tendrás que elegirlo en el desplegable <b>Plantilla</b> y pulsar <b>Cargar</b> para rellenar toda la columna mágicamente.</li>
+  <li><b>ID Permiso de Modelo & ID Permiso de Propiedad:</b> Lo que escribas aquí se rellenará automáticamente en la columna <code>Releases</code> del documento <code>adobe_stock_export.csv</code> (separados por comas si usas ambos).</li>
+  <li><b>País (Contacto):</b> Lo que escribas en "País" viajará a la columna oculta de país en el archivo <code>123rf_export.csv</code>.</li>
 </ul>
 
-<h3 style="color: #97A788;">📄 4. Consola de Registro (Logs)</h3>
-<p>El panel derecho es tu monitor del sistema. Aquí verás en tiempo real qué archivo se está procesando, qué palabras clave ha generado la IA, y si ha habido algún error durante la inyección de los datos.</p>
+<h3 style="color: #97A788;">Gestor de Plantillas</h3>
+<p>Si siempre usas la misma información de autor y contacto, no la escribas cada vez:</p>
+<ol>
+  <li>Rellena todos tus datos de Autor, Copyright y Permisos.</li>
+  <li>Escribe un nombre en la casilla "Nombre" (ej: <i>"Shoot Editorial Moda"</i> o <i>"Mi Estudio Base"</i>).</li>
+  <li>Pulsa <b>Guardar</b>. A partir de ahora, podrás cargarlo instantáneamente desde el desplegable.</li>
+</ol>
 
-<h2 style="color: #D6B972; margin-top: 40px;">🧠 El "Prompt" Maestro: ¿Qué le decimos a la IA?</h2>
-<p>Aunque la aplicación no imprime el texto completo en la Consola para no sobrecargar la pantalla, el sistema envía internamente unas instrucciones muy estrictas en inglés (ya que los modelos razonan mejor en este idioma) que se construyen dinámicamente con tus ajustes. El esquema base es el siguiente:</p>
+<h2 style="color: #D6B972; margin-top: 40px; border-bottom: 1px solid #e0d5c1; padding-bottom: 5px;">📊 5. Las Hojas de Cálculo CSV Generadas</h2>
 
-<blockquote style="background-color: #f1ebd8; border-left: 4px solid #97A788; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 0.9em; color: #141313;">
-"You are a stock photography metadata generator. Analyze the entire image and produce production-ready metadata.<br>
-<br>
-<i>[Aquí se inyectan tus Instrucciones Adicionales si has escrito algo]</i><br>
-<br>
-Output requirements:<br>
-- Title: Minimum <b>[X]</b> words, maximum <b>[Y]</b> characters, descriptive, unique, no special characters.<br>
-- Description: Minimum <b>[X]</b> words, maximum <b>[Y]</b> characters, detailed, unique, no special characters.<br>
-- Keywords: Provide up to <b>[Z]</b> unique keywords. Optimize for stock SEO. CRITICAL: Do NOT repeat the same base word in multiple keywords. Deduplicate concepts to maximize coverage. No multi-word phrases (e.g., instead of 'minimalist design', use 'minimalist, design').<br>
-- Adobe Stock category: choose the number and name from: <i>[Lista de Adobe]</i>.<br>
-- Shutterstock category: choose one from: <i>[Lista de Shutterstock]</i>.<br>
-<br>
-Return ONLY valid JSON matching this schema exactly..."
-</blockquote>
-<p>Las variables <b>[X]</b> e <b>[Y]</b> cambian según el <i>Nivel de Detalle</i> que hayas elegido (ej: Detailed envía 6 y 180), y la <b>[Z]</b> es la cantidad exacta del deslizador de <i>Cantidad Keywords</i>.</p>
+<p>En tu carpeta de <i>Salida</i>, se creará una subcarpeta llamada <code>metadata_csv</code>. Aquí encontrarás hojas Excel listas para importar directamente en el portal de subidas de cada agencia, ahorrándote horas de trabajo manual. Cada agencia tiene su formato particular:</p>
+
+<ul>
+  <li><b>adobe_stock_export.csv:</b> Incluye Nombre, Título, Keywords, Categoría Mapeada, y la columna "Releases" (si rellenaste las IDs de Modelo/Propiedad en la interfaz).</li>
+  <li><b>shutterstock_export.csv:</b> Incluye Nombre, Descripción, Keywords, y la Categoría Oficial de Shutterstock calculada. (El contenido para adultos y editorial se marca como "No" por defecto).</li>
+  <li><b>vecteezy_export.csv:</b> Adaptado a los requisitos de Vecteezy (Licencia Pro por defecto).</li>
+  <li><b>123rf_export.csv:</b> Usa su formato propietario, capturando el país de tus datos de contacto.</li>
+  <li><b>depositphotos_export.csv & miri_canvas_export.csv:</b> Plantillas estandarizadas para dichas plataformas.</li>
+</ul>
 
 <hr style="border: 0; height: 1px; background-color: #D6B972; margin-top: 40px; margin-bottom: 20px;">
-<p style="text-align: center; font-size: 0.9em;"><i>La aplicación recordará automáticamente tu última configuración para que tu flujo de trabajo sea lo más rápido posible.</i></p>
+<p style="text-align: center; font-size: 0.9em;"><i>La aplicación recordará automáticamente tu última configuración de directorios y modelo para que tu flujo de trabajo diario requiera apenas un par de clics.</i></p>
 
 </div>
