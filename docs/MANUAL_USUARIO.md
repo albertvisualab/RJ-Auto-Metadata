@@ -28,7 +28,7 @@
     <th style="padding: 12px; text-align: left; border: 1px solid #d1c8b4;">Longitud Objetivo</th>
     <th style="padding: 12px; text-align: left; border: 1px solid #d1c8b4;">Uso Ideal y Comportamiento</th>
   </tr>
-  <tr style="color: #141313;">
+  <tr style="color: #141313; background-color: #ffffff;">
     <td style="padding: 12px; border: 1px solid #e0d5c1;"><b>Detailed</b></td>
     <td style="padding: 12px; border: 1px solid #e0d5c1;">6 a 180 caracteres</td>
     <td style="padding: 12px; border: 1px solid #e0d5c1;">La IA se vuelve hiperexhaustiva. Describe colores, fondos, texturas y estados de ánimo. Ideal para Adobe Stock o Shutterstock, que premian el detalle descriptivo masivo.</td>
@@ -38,7 +38,7 @@
     <td style="padding: 12px; border: 1px solid #e0d5c1;">5 a 165 caracteres</td>
     <td style="padding: 12px; border: 1px solid #e0d5c1;">Punto intermedio perfecto. Descripciones naturales que capturan la esencia sin caer en la verborrea excesiva.</td>
   </tr>
-  <tr style="color: #141313;">
+  <tr style="color: #141313; background-color: #ffffff;">
     <td style="padding: 12px; border: 1px solid #e0d5c1;"><b>Less</b></td>
     <td style="padding: 12px; border: 1px solid #e0d5c1;">4 a 150 caracteres</td>
     <td style="padding: 12px; border: 1px solid #e0d5c1;">Títulos cortos y al grano. Usar para sujetos recortados (aislados en blanco) o ilustraciones muy minimalistas.</td>
