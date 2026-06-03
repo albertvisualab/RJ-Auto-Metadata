@@ -33,7 +33,8 @@ from src.utils.json_utils import _clean_json_text
 from src.utils.stop_flag import is_stop_requested
 
 API_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
-API_TIMEOUT = 60
+_DEFAULT_CHAT_PATH = "/chat/completions"
+API_TIMEOUT = 300
 API_MAX_RETRIES = 2
 RETRY_DELAY_SECONDS = 8
 MAX_OUTPUT_TOKENS: Optional[int] = None

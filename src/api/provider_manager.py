@@ -35,6 +35,7 @@ PROVIDER_KOBOILLM = "KoboiLLM"
 PROVIDER_CUSTOM = "Custom"
 PROVIDER_MISTRAL = "Mistral"
 PROVIDER_BLACKBOX = "Blackbox"
+PROVIDER_OLLAMA = "Ollama"
 _DEFAULT_PROVIDER = PROVIDER_GEMINI
 
 PROVIDER_BASE_URLS = {
@@ -45,6 +46,7 @@ PROVIDER_BASE_URLS = {
     PROVIDER_KOBOILLM: "https://litellm.koboi2026.biz.id",
     PROVIDER_MISTRAL: "https://api.mistral.ai/v1",
     PROVIDER_BLACKBOX: "https://api.blackbox.ai",
+    PROVIDER_OLLAMA: "http://host.docker.internal:11434/v1",
     PROVIDER_CUSTOM: "",
 }
 
@@ -75,6 +77,10 @@ _PROVIDERS = {
     },
     PROVIDER_BLACKBOX: {
         "module": blackbox_api,
+        "supports_auto_rotation": False,
+    },
+    PROVIDER_OLLAMA: {
+        "module": openrouter_api,
         "supports_auto_rotation": False,
     },
     PROVIDER_CUSTOM: {
@@ -133,10 +139,11 @@ def fetch_models(provider: str, api_key: str, base_url: Optional[str] = None) ->
     from openai import OpenAI
 
     # Resolve endpoint URL
-    if provider == PROVIDER_CUSTOM:
-        url = (base_url or "").strip()
+    if provider == PROVIDER_CUSTOM or provider == PROVIDER_OLLAMA:
+        # Fallback to configured base url if no override
+        url = (base_url or PROVIDER_BASE_URLS.get(provider, "")).strip()
         if not url:
-            log_message("Custom provider requires a Base URL to fetch models.", "warning")
+            log_message(f"{provider} provider requires a Base URL to fetch models.", "warning")
             return []
     else:
         url = PROVIDER_BASE_URLS.get(provider, "")
@@ -260,11 +267,14 @@ def get_metadata(
 
     effective_model = selected_model
 
-    if provider_key == PROVIDER_CUSTOM:
-        effective_base_url = (base_url_override or "").strip()
+    if provider_key == PROVIDER_CUSTOM or provider_key == PROVIDER_OLLAMA:
+        effective_base_url = (base_url_override or PROVIDER_BASE_URLS.get(provider_key, "")).strip()
         if not effective_base_url:
-            log_message("Custom provider requires a base_url_override.", "error")
-            return {"error": "custom_provider_no_base_url"}
+            log_message(f"{provider_key} provider requires a base_url_override.", "error")
+            return {"error": f"{provider_key}_provider_no_base_url"}
+        if not (effective_model or "").strip():
+            log_message(f"{provider_key} provider requires a model selection.", "error")
+            return {"error": f"{provider_key}_provider_no_model"}
         result = openrouter_api.get_openrouter_metadata(
             image_path,
             api_key,
@@ -390,8 +400,37 @@ def get_metadata(
     return result
 
 
-def check_api_keys_status(provider: str, api_keys: Iterable[str], model: Optional[str] = None):
+def check_api_keys_status(provider: str, api_keys: Iterable[str], model: Optional[str] = None, base_url_override: Optional[str] = None):
     module, provider_key = get_provider_module(provider)
+    if provider_key == PROVIDER_CUSTOM or provider_key == PROVIDER_OLLAMA:
+        effective_base_url = (base_url_override or PROVIDER_BASE_URLS.get(provider_key, "")).strip()
+        if not effective_base_url:
+            return {k: (-1, f"{provider_key} provider requires a Base URL") for k in api_keys}
+            
+        if not model or model == "dummy":
+            # Simple connectivity check using /models
+            try:
+                import requests
+                models_url = effective_base_url.rstrip("/")
+                if models_url.endswith("/chat/completions"):
+                    models_url = models_url.replace("/chat/completions", "/models")
+                elif not models_url.endswith("/models"):
+                    models_url = f"{models_url}/models"
+                    
+                headers = {"Authorization": f"Bearer {list(api_keys)[0]}"}
+                resp = requests.get(models_url, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    return {k: (200, "OK") for k in api_keys}
+                else:
+                    return {k: (resp.status_code, resp.text[:100]) for k in api_keys}
+            except Exception as e:
+                return {k: (-1, str(e)[:100]) for k in api_keys}
+                
+        return openrouter_api.check_api_keys_status(
+            list(api_keys),
+            model=model,
+            base_url_override=effective_base_url,
+        )
     if module is None:
         return {k: (-1, "No module for this provider") for k in api_keys}
     return module.check_api_keys_status(list(api_keys), model=model)

@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  metadata_app:
+    image: "python:3.10"
+    container_name: auto_metadata_app
+    working_dir: /app
+    ports:
+      - "7860:7860"
+    volumes:
+      - .:/app
+    # Canviem al paquet modern 'libgl1' compatible amb el Linux actual, i afegim ghostscript i exiftool
+    command: sh -c "apt-get update && apt-get install -y libgl1 libglib2.0-0 ghostscript exiftool && pip install --no-cache-dir -r requirements.txt && python gui.py"
+    restart: unless-stopped
