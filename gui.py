@@ -18,6 +18,7 @@ from src.metadata.exif_writer import check_exiftool_exists
 check_exiftool_exists()
 from src.utils.logging import set_log_handler
 from src.utils.file_utils import ALL_SUPPORTED_EXTENSIONS
+from src.ui.translations import get_text
 
 # Global variable to store streaming logs
 log_messages = []
@@ -40,6 +41,10 @@ def load_config_data():
             return json.load(f)
     except Exception:
         return {}
+
+_current_lang = load_config_data().get("last_state", {}).get("language", "Español")
+def _(key):
+    return get_text(key, _current_lang)
 
 def save_config_data(data):
     try:
@@ -113,7 +118,7 @@ def get_last_state():
     config = load_config_data()
     return config.get("last_state", {})
 
-def save_last_state(input_d, output_d, prov, mod, qual, kw, rename, theme="Claro"):
+def save_last_state(input_d, output_d, prov, mod, qual, kw, rename, theme="Claro", language="Español"):
     config = load_config_data()
     config["last_state"] = {
         "input_dir": input_d,
@@ -123,7 +128,8 @@ def save_last_state(input_d, output_d, prov, mod, qual, kw, rename, theme="Claro
         "quality": qual,
         "keywords_count": kw,
         "rename_files": rename,
-        "theme": theme
+        "theme": theme,
+        "language": language
     }
     save_config_data(config)
 
@@ -420,29 +426,34 @@ footer {display: none !important;}
 with gr.Blocks(title="Auto metadata", theme=light_theme, css=custom_css) as demo:
     with gr.Row(elem_id="header_row"):
         with gr.Column(scale=4):
-            gr.HTML("<h2 style='color: #97A788; margin-bottom: 0;'>Auto Metadata <span style='font-size:0.6em; color:gray; font-weight:normal;'>Plataforma web moderna para la generación automática de metadatos mediante IA.</span></h2>")
+            gr.HTML(_("title_main"))
         with gr.Column(scale=1, min_width=150):
-            settings_btn = gr.Button("⚙️ Ajustes Entorno y API", variant="secondary")
-            back_btn = gr.Button("🔙 Volver al Trabajo", variant="primary", visible=False)
+            settings_btn = gr.Button(_("btn_settings"), variant="secondary")
+            back_btn = gr.Button(_("btn_back"), variant="primary", visible=False)
             
     with gr.Column(visible=False) as settings_workspace:
         with gr.Row():
-            env_toggle = gr.Radio(["Docker (Contenedor)", "Local (Nativo)"], label="Modo de Entorno", value="Docker (Contenedor)" if is_docker_env() else "Local (Nativo)", info="Ajusta la forma de navegar por las carpetas.")
-            theme_toggle = gr.Radio(["Claro", "Oscuro"], label="Tema de la Aplicación", value="Claro", info="Elige entre modo claro u oscuro.")
-            
-        gr.Markdown("### 🔐 Credenciales y Seguridad")
-        gr.Markdown("Selecciona un proveedor, introduce su Clave API y guárdala. Esta configuración se guarda de manera segura en tu entorno local.")
+            with gr.Column(scale=1):
+                env_toggle = gr.Radio(["Docker (Contenedor)", "Local (Nativo)"], label=_("label_env_mode"), value="Docker (Contenedor)" if is_docker_env() else "Local (Nativo)")
+            with gr.Column(scale=1):
+                theme_toggle = gr.Radio(["Claro", "Oscuro"], label=_("label_theme"), value="Claro")
+            with gr.Column(scale=1):
+                language_toggle = gr.Dropdown(["Español", "English", "Català"], label=_("label_language"), value=_current_lang)
+                info_lang_key = "info_language_docker" if is_docker_env() else "info_language_native"
+                gr.Markdown(f"<span style='font-size: 0.85em; color: #a89052;'>{_(info_lang_key)}</span>")
+        gr.Markdown(_("title_credentials"))
+        gr.Markdown(_("desc_credentials"))
         
         with gr.Row():
             with gr.Column(scale=1):
-                provider_settings = gr.Dropdown(label="🌐 Proveedor a Configurar", choices=get_providers(), value=get_providers()[0] if get_providers() else None)
+                provider_settings = gr.Dropdown(label=_("label_provider_config"), choices=get_providers(), value=get_providers()[0] if get_providers() else None)
             with gr.Column(scale=2):
-                api_key = gr.Textbox(label="🔑 Clave secreta API", type="password", placeholder="Introduce aquí tu clave API...")
+                api_key = gr.Textbox(label=_("label_api_key"), type="password")
             with gr.Column(scale=2):
-                base_url = gr.Textbox(label="🔗 URL Base (Local/Custom)", placeholder="Ej: http://host.docker.internal:11434/v1", visible=False)
+                base_url = gr.Textbox(label=_("label_base_url"), visible=False)
         
         with gr.Row():
-            save_key_btn = gr.Button("💾 Guardar y Validar Configuración", variant="primary")
+            save_key_btn = gr.Button(_("btn_save_config"), variant="primary")
             validation_output = gr.Markdown("")
 
     with gr.Column(visible=True) as main_workspace:
@@ -451,18 +462,18 @@ with gr.Blocks(title="Auto metadata", theme=light_theme, css=custom_css) as demo
         with gr.Row():
             # COLUMNA 1: GESTIÓN + MOTOR
             with gr.Column(scale=1):
-                gr.Markdown("### 📂 Gestión de Directorios")
+                gr.Markdown(_("title_directories"))
                 root_path = "/app" if os.path.exists("/app") else os.path.abspath(".")
                 
                 with gr.Row(visible=is_docker_env()) as docker_row:
-                    input_browser = gr.Dropdown(label="📁 Origen (Docker)", choices=get_directories(), value=get_directories()[0] if get_directories() else "", allow_custom_value=True)
-                    output_browser = gr.Dropdown(label="📂 Salida (Docker)", choices=get_directories(), value=get_directories()[0] if get_directories() else "", allow_custom_value=True)
+                    input_browser = gr.Dropdown(label=_("label_input_docker"), choices=get_directories(), value=get_directories()[0] if get_directories() else "", allow_custom_value=True)
+                    output_browser = gr.Dropdown(label=_("label_output_docker"), choices=get_directories(), value=get_directories()[0] if get_directories() else "", allow_custom_value=True)
                 
                 with gr.Row(visible=not is_docker_env()) as native_row:
-                    input_dir = gr.Textbox(label="📁 Origen (Local)", placeholder="Ruta a la carpeta...", scale=3)
-                    native_input_btn = gr.Button("📂 Examinar", variant="secondary", scale=1)
-                    output_dir = gr.Textbox(label="📂 Salida (Local)", placeholder="Ruta a la carpeta...", scale=3)
-                    native_output_btn = gr.Button("📂 Examinar", variant="secondary", scale=1)
+                    input_dir = gr.Textbox(label=_("label_input_local"), scale=3)
+                    native_input_btn = gr.Button(_("btn_browse"), variant="secondary", scale=1)
+                    output_dir = gr.Textbox(label=_("label_output_local"), scale=3)
+                    native_output_btn = gr.Button(_("btn_browse"), variant="secondary", scale=1)
                     
                 if is_docker_env():
                     input_dir = gr.Textbox(visible=False, value=get_directories()[0] if get_directories() else "")
@@ -471,70 +482,70 @@ with gr.Blocks(title="Auto metadata", theme=light_theme, css=custom_css) as demo
                     native_output_btn = gr.Button(visible=False)
                     
                 with gr.Row():
-                    check_files_btn = gr.Button("🔍 Verificar Directorio", variant="secondary", scale=1)
-                    file_count_output = gr.Markdown("⚠️ No verificado.")
+                    check_files_btn = gr.Button(_("btn_verify_dir"), variant="secondary", scale=1)
+                    file_count_output = gr.Markdown("")
                     
                 with gr.Row():
-                    gr.Markdown("### 🤖 Modelo IA")
+                    gr.Markdown(_("title_ai_model"))
                     provider_warning = gr.Markdown("", visible=False)
                     
                 with gr.Row():
-                    provider_work = gr.Dropdown(label="🌐 Proveedor IA", choices=get_providers(), value=get_providers()[0] if get_providers() else None)
-                    model_work = gr.Dropdown(label="🤖 Modelo", choices=[], allow_custom_value=True)
+                    provider_work = gr.Dropdown(label=_("label_provider_work"), choices=get_providers(), value=get_providers()[0] if get_providers() else None)
+                    model_work = gr.Dropdown(label=_("label_model_work"), choices=[], allow_custom_value=True)
                 
-                gr.Markdown("#### Ajustes Avanzados")
+                gr.Markdown(_("title_advanced"))
                 with gr.Row():
-                    quality = gr.Dropdown(label="🎯 Nivel Detalle", choices=["Detailed", "Balanced", "Less", "Custom"], value="Detailed")
-                    keywords_count = gr.Slider(label="🏷️ Cantidad Keywords", minimum=10, maximum=100, step=1, value=49)
-                rename_files = gr.Checkbox(label="✏️ Renombrar archivos automáticamente (SEO)", value=False)
-                auto_category = gr.Checkbox(label="🏷️ Auto Categorizar para Agencias Stock", value=True)
-                custom_instruction = gr.Textbox(label="📋 Instrucciones Adicionales", lines=5, placeholder="Ej: Centrarse en el estado de ánimo cinematográfico y paletas de colores cálidas...")
+                    quality = gr.Dropdown(label=_("label_quality"), choices=["Detailed", "Balanced", "Less", "Custom"], value="Detailed")
+                    keywords_count = gr.Slider(label=_("label_keywords"), minimum=10, maximum=100, step=1, value=49)
+                rename_files = gr.Checkbox(label=_("label_rename"), value=False)
+                auto_category = gr.Checkbox(label=_("label_auto_cat"), value=True)
+                custom_instruction = gr.Textbox(label=_("label_custom_inst"), lines=5)
             
             # COLUMNA 2: METADATOS Y PLANTILLAS
             with gr.Column(scale=1):
-                gr.Markdown("### 📝 Metadatos Fijos y Plantillas")
+                gr.Markdown(_("title_metadata"))
                 with gr.Group():
-                    author_name = gr.Textbox(label="👤 Autor / Creador", placeholder="Ej: Juan Pérez", lines=1)
-                    copyright_info = gr.Textbox(label="©️ Derechos de Autor (Copyright)", placeholder="Ej: 2026 Studio", lines=1)
-                    usage_terms = gr.Textbox(label="⚖️ Términos de Uso", placeholder="Ej: Todos los derechos reservados", lines=1)
-                    clear_base_btn = gr.Button("🧹 Vaciar Base", size="sm", variant="secondary")
+                    author_name = gr.Textbox(label=_("label_author"), lines=1)
+                    copyright_info = gr.Textbox(label=_("label_copyright"), lines=1)
+                    usage_terms = gr.Textbox(label=_("label_usage"), lines=1)
+                    clear_base_btn = gr.Button(_("btn_clear_base"), size="sm", variant="secondary")
                 
-                with gr.Accordion("📞 Información de Contacto (Opcional)", open=False):
-                    contact_email = gr.Textbox(label="📧 Email de Contacto", placeholder="Ej: hola@studio.com", lines=1)
-                    contact_web = gr.Textbox(label="🌐 Página Web", placeholder="Ej: www.studio.com", lines=1)
-                    contact_phone = gr.Textbox(label="📞 Teléfono", placeholder="Ej: +34 600 000 000", lines=1)
-                    contact_city = gr.Textbox(label="🏙️ Ciudad", placeholder="Ej: Barcelona", lines=1)
-                    contact_country = gr.Textbox(label="🌍 País", placeholder="Ej: España", lines=1)
-                    contact_address = gr.Textbox(label="📍 Dirección", placeholder="Ej: Calle Principal 123", lines=1)
-                    clear_contact_btn = gr.Button("🧹 Vaciar Contacto", size="sm", variant="secondary")
+                with gr.Accordion(_("title_contact"), open=False):
+                    contact_email = gr.Textbox(label=_("label_email"), lines=1)
+                    contact_web = gr.Textbox(label=_("label_web"), lines=1)
+                    contact_phone = gr.Textbox(label=_("label_phone"), lines=1)
+                    contact_city = gr.Textbox(label=_("label_city"), lines=1)
+                    contact_country = gr.Textbox(label=_("label_country"), lines=1)
+                    contact_address = gr.Textbox(label=_("label_address"), lines=1)
+                    clear_contact_btn = gr.Button(_("btn_clear_contact"), size="sm", variant="secondary")
                     
-                with gr.Accordion("📜 Licencias y Permisos (Opcional)", open=False):
-                    licensor = gr.Textbox(label="🏢 Licenciante", placeholder="Ej: Agencia XYZ", lines=1)
-                    model_release = gr.Textbox(label="🧑 ID Permiso de Modelo", placeholder="Ej: MR-2026-001", lines=1)
-                    property_release = gr.Textbox(label="🏠 ID Permiso de Propiedad", placeholder="Ej: PR-2026-001", lines=1)
-                    clear_license_btn = gr.Button("🧹 Vaciar Licencias", size="sm", variant="secondary")
+                with gr.Accordion(_("title_licenses"), open=False):
+                    licensor = gr.Textbox(label=_("label_licensor"), lines=1)
+                    model_release = gr.Textbox(label=_("label_model_rel"), lines=1)
+                    property_release = gr.Textbox(label=_("label_prop_rel"), lines=1)
+                    clear_license_btn = gr.Button(_("btn_clear_licenses"), size="sm", variant="secondary")
                     
-                gr.Markdown("#### 💾 Gestor de Plantillas")
+                gr.Markdown(_("title_templates"))
                 with gr.Row():
                     with gr.Column(scale=1, min_width=50):
-                        template_dropdown = gr.Dropdown(label="Plantilla", choices=get_template_names(), value=None)
-                        load_template_btn = gr.Button("📂 Cargar", variant="secondary", size="sm")
+                        template_dropdown = gr.Dropdown(label=_("label_template"), choices=get_template_names(), value=None)
+                        load_template_btn = gr.Button(_("btn_load"), variant="secondary", size="sm")
                     with gr.Column(scale=1, min_width=50):
-                        template_name = gr.Textbox(label="Nombre", placeholder="Nuevo...", lines=1)
-                        save_template_btn = gr.Button("💾 Guardar", variant="primary", size="sm")
+                        template_name = gr.Textbox(label=_("label_name"), lines=1)
+                        save_template_btn = gr.Button(_("btn_save"), variant="primary", size="sm")
                     
                 template_status = gr.Markdown("")
                 
             # COLUMNA 3: REGISTROS
             with gr.Column(scale=1):
-                gr.Markdown("### 📄 Consola de Registro")
+                gr.Markdown(_("title_logs"))
                 output_logs = gr.Textbox(label="", show_label=False, lines=30, interactive=False, max_lines=40)
             
     gr.Markdown("---")
     
     with gr.Row():
-        process_btn = gr.Button("▶ Iniciar Procesamiento Múltiple", variant="primary", size="lg")
-        stop_btn = gr.Button("🛑 Cancelar Proceso", variant="secondary", size="lg")
+        process_btn = gr.Button(_("btn_start"), variant="primary", size="lg")
+        stop_btn = gr.Button(_("btn_stop"), variant="secondary", size="lg")
                 
     # --- EVENT WIRING ---
     
@@ -627,13 +638,13 @@ with gr.Blocks(title="Auto metadata", theme=light_theme, css=custom_css) as demo
     back_btn.click(fn=hide_settings, inputs=[], outputs=[main_workspace, settings_workspace, settings_btn, back_btn])
     
     # --- State Persistence ---
-    def on_state_change(ind, outd, prov, mod, qual, kw, rename, theme):
-        save_last_state(ind, outd, prov, mod, qual, kw, rename, theme)
+    def on_state_change(ind, outd, prov, mod, qual, kw, rename, theme, lang):
+        save_last_state(ind, outd, prov, mod, qual, kw, rename, theme, lang)
         
-    for component in [input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle]:
+    for component in [input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle, language_toggle]:
         component.change(
             fn=on_state_change,
-            inputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle],
+            inputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle, language_toggle],
             outputs=[]
         )
         
@@ -647,7 +658,7 @@ with gr.Blocks(title="Auto metadata", theme=light_theme, css=custom_css) as demo
     def load_initial_state():
         state = get_last_state()
         if not state:
-            return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+            return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         return (
             gr.update(value=state.get("input_dir", "")),
             gr.update(value=state.get("output_dir", "")),
@@ -656,13 +667,14 @@ with gr.Blocks(title="Auto metadata", theme=light_theme, css=custom_css) as demo
             gr.update(value=state.get("quality", "Detailed")),
             gr.update(value=state.get("keywords_count", 49)),
             gr.update(value=state.get("rename_files", False)),
-            gr.update(value=state.get("theme", "Claro"))
+            gr.update(value=state.get("theme", "Claro")),
+            gr.update(value=state.get("language", "Español"))
         )
     
     # Initialize UI state
     demo.load(
         fn=load_initial_state, 
-        outputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle]
+        outputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle, language_toggle]
     ).then(
         fn=None,
         inputs=[theme_toggle],
