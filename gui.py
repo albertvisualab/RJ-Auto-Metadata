@@ -113,7 +113,7 @@ def get_last_state():
     config = load_config_data()
     return config.get("last_state", {})
 
-def save_last_state(input_d, output_d, prov, mod, qual, kw, rename):
+def save_last_state(input_d, output_d, prov, mod, qual, kw, rename, theme="Claro"):
     config = load_config_data()
     config["last_state"] = {
         "input_dir": input_d,
@@ -122,7 +122,8 @@ def save_last_state(input_d, output_d, prov, mod, qual, kw, rename):
         "model": mod,
         "quality": qual,
         "keywords_count": kw,
-        "rename_files": rename
+        "rename_files": rename,
+        "theme": theme
     }
     save_config_data(config)
 
@@ -412,7 +413,11 @@ light_theme = gr.themes.Soft(
 def is_docker_env():
     return os.path.exists("/.dockerenv")
 
-with gr.Blocks(title="Auto metadata", theme=light_theme) as demo:
+custom_css = """
+footer {display: none !important;}
+"""
+
+with gr.Blocks(title="Auto metadata", theme=light_theme, css=custom_css) as demo:
     with gr.Row(elem_id="header_row"):
         with gr.Column(scale=4):
             gr.HTML("<h2 style='color: #97A788; margin-bottom: 0;'>Auto Metadata <span style='font-size:0.6em; color:gray; font-weight:normal;'>Plataforma web moderna para la generación automática de metadatos mediante IA.</span></h2>")
@@ -423,6 +428,7 @@ with gr.Blocks(title="Auto metadata", theme=light_theme) as demo:
     with gr.Column(visible=False) as settings_workspace:
         with gr.Row():
             env_toggle = gr.Radio(["Docker (Contenedor)", "Local (Nativo)"], label="Modo de Entorno", value="Docker (Contenedor)" if is_docker_env() else "Local (Nativo)", info="Ajusta la forma de navegar por las carpetas.")
+            theme_toggle = gr.Radio(["Claro", "Oscuro"], label="Tema de la Aplicación", value="Claro", info="Elige entre modo claro u oscuro.")
             
         gr.Markdown("### 🔐 Credenciales y Seguridad")
         gr.Markdown("Selecciona un proveedor, introduce su Clave API y guárdala. Esta configuración se guarda de manera segura en tu entorno local.")
@@ -621,20 +627,27 @@ with gr.Blocks(title="Auto metadata", theme=light_theme) as demo:
     back_btn.click(fn=hide_settings, inputs=[], outputs=[main_workspace, settings_workspace, settings_btn, back_btn])
     
     # --- State Persistence ---
-    def on_state_change(ind, outd, prov, mod, qual, kw, rename):
-        save_last_state(ind, outd, prov, mod, qual, kw, rename)
+    def on_state_change(ind, outd, prov, mod, qual, kw, rename, theme):
+        save_last_state(ind, outd, prov, mod, qual, kw, rename, theme)
         
-    for component in [input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files]:
+    for component in [input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle]:
         component.change(
             fn=on_state_change,
-            inputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files],
+            inputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle],
             outputs=[]
         )
+        
+    theme_toggle.change(
+        fn=None,
+        inputs=[theme_toggle],
+        outputs=None,
+        js="(theme) => { document.body.classList.remove('dark', 'light'); document.body.classList.add(theme === 'Oscuro' ? 'dark' : 'light'); }"
+    )
         
     def load_initial_state():
         state = get_last_state()
         if not state:
-            return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+            return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         return (
             gr.update(value=state.get("input_dir", "")),
             gr.update(value=state.get("output_dir", "")),
@@ -642,11 +655,20 @@ with gr.Blocks(title="Auto metadata", theme=light_theme) as demo:
             gr.update(value=state.get("model", None)),
             gr.update(value=state.get("quality", "Detailed")),
             gr.update(value=state.get("keywords_count", 49)),
-            gr.update(value=state.get("rename_files", False))
+            gr.update(value=state.get("rename_files", False)),
+            gr.update(value=state.get("theme", "Claro"))
         )
     
     # Initialize UI state
-    demo.load(fn=load_initial_state, outputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files])
+    demo.load(
+        fn=load_initial_state, 
+        outputs=[input_dir, output_dir, provider_work, model_work, quality, keywords_count, rename_files, theme_toggle]
+    ).then(
+        fn=None,
+        inputs=[theme_toggle],
+        outputs=None,
+        js="(theme) => { setTimeout(() => { document.body.classList.remove('dark', 'light'); document.body.classList.add(theme === 'Oscuro' ? 'dark' : 'light'); }, 50); }"
+    )
     demo.load(fn=update_models, inputs=provider_work, outputs=model_work)
     demo.load(fn=update_api_key_visibility, inputs=provider_settings, outputs=[api_key, base_url])
     demo.load(fn=check_provider_readiness, inputs=provider_work, outputs=provider_warning)
