@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$(dirname "$0")"
 echo "Iniciant RJ Auto Metadata (Entorn Local)..."
 echo "=============================================="
 
