@@ -1,5 +1,5 @@
 customtkinter
-Pillow
+Pillow<11.0
 svglib
 reportlab
 CairoSVG
