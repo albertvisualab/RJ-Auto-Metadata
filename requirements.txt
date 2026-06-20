@@ -5,7 +5,6 @@ reportlab
 CairoSVG
 opencv-python
 requests
-google-genai
 openai>=1.0.0
 portalocker
 Flask-SQLAlchemy
