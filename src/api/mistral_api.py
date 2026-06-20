@@ -44,7 +44,9 @@ def check_stop_event(stop_event, message=None):
     return False
 
 
-def select_api_key(api_keys: list) -> str | None:
+from typing import Optional
+
+def select_api_key(api_keys: list) -> Optional[str]:
     return api_keys[0] if api_keys else None
 
 
