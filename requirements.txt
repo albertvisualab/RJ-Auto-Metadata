@@ -9,3 +9,4 @@ openai>=1.0.0
 portalocker
 Flask-SQLAlchemy
 gradio>=4.0.0
+huggingface-hub<0.26.0
