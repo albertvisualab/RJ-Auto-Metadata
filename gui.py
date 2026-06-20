@@ -5,6 +5,10 @@ import threading
 import time
 import json
 
+# Prevent Tkinter/macOS crash by forcing Matplotlib headless backend
+import matplotlib
+matplotlib.use('Agg')
+
 import gradio as gr
 
 # Add current directory to path so absolute imports like src.* work
