@@ -224,14 +224,23 @@ def check_files(folder_path):
 
 def open_native_folder_picker(current_path):
     try:
-        import tkinter as tk
-        from tkinter import filedialog
-        root = tk.Tk()
-        root.attributes('-topmost', True)
-        root.withdraw()
-        folder_path = filedialog.askdirectory(parent=root, title="Seleccionar Carpeta", initialdir=current_path if os.path.exists(current_path) else "/")
-        root.destroy()
-        return folder_path if folder_path else current_path
+        import subprocess
+        import sys
+        initial = current_path if os.path.exists(current_path) else "/"
+        initial = initial.replace('\\', '\\\\')
+        
+        script = f"""
+import tkinter as tk
+from tkinter import filedialog
+root = tk.Tk()
+root.attributes('-topmost', True)
+root.withdraw()
+folder_path = filedialog.askdirectory(parent=root, title='Seleccionar Carpeta', initialdir='{initial}')
+root.destroy()
+print(folder_path)
+"""
+        result = subprocess.check_output([sys.executable, "-c", script], text=True).strip()
+        return result if result else current_path
     except Exception as e:
         print(f"Native picker failed: {e}")
         return current_path
