@@ -226,10 +226,23 @@ def open_native_folder_picker(current_path):
     try:
         import subprocess
         import sys
+        import os
         initial = current_path if os.path.exists(current_path) else "/"
-        initial = initial.replace('\\', '\\\\')
         
-        script = f"""
+        if sys.platform == "darwin":
+            # AppleScript native folder picker for macOS (100% native and bug-free)
+            script = f'''
+            tell application "System Events"
+                activate
+                set folderPath to POSIX path of (choose folder with prompt "Seleccionar Carpeta" default location POSIX file "{initial}")
+            end tell
+            return folderPath
+            '''
+            result = subprocess.check_output(["osascript", "-e", script], text=True).strip()
+            return result if result else current_path
+        else:
+            initial = initial.replace('\\', '\\\\')
+            script = f"""
 import tkinter as tk
 from tkinter import filedialog
 root = tk.Tk()
@@ -239,8 +252,8 @@ folder_path = filedialog.askdirectory(parent=root, title='Seleccionar Carpeta', 
 root.destroy()
 print(folder_path)
 """
-        result = subprocess.check_output([sys.executable, "-c", script], text=True).strip()
-        return result if result else current_path
+            result = subprocess.check_output([sys.executable, "-c", script], text=True).strip()
+            return result if result else current_path
     except Exception as e:
         print(f"Native picker failed: {e}")
         return current_path
